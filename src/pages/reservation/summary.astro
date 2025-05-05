@@ -144,7 +144,7 @@ const totalPrice = pricePerPerson * parsedNumberOfPeople;
     
     <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
       <a 
-        href={`/reservation/contact?numberOfPeople=${numberOfPeople}&vrType=${vrType}&selectedDateTime=${selectedDateTime}`} 
+        href={`/reservation/contact?numberOfPeople=${numberOfPeople}&vrType=${vrType}&duration=${duration}&selectedDateTime=${selectedDateTime}`} 
         class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
       >
         ← Retour
@@ -186,7 +186,8 @@ const totalPrice = pricePerPerson * parsedNumberOfPeople;
     // Les champs à traiter
     const fields = [
       'numberOfPeople', 
-      'vrType', 
+      'vrType',
+      'duration',
       'fullName', 
       'email', 
       'phoneNumber'
@@ -216,6 +217,8 @@ const totalPrice = pricePerPerson * parsedNumberOfPeople;
           const numPeople = parseInt(params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople') || '0');
           const finalVrType = (numPeople > 4 && valueToDisplay === 'VR_WIRELESS') ? 'VR' : valueToDisplay;
           displayElement.textContent = finalVrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard';
+        } else if (field === 'duration' && valueToDisplay) {
+          displayElement.textContent = `${valueToDisplay} minutes`;
         } else if (valueToDisplay) {
           displayElement.textContent = valueToDisplay;
         }
@@ -254,6 +257,7 @@ const totalPrice = pricePerPerson * parsedNumberOfPeople;
       fromURL: { 
         numberOfPeople: params.get('numberOfPeople'),
         vrType: params.get('vrType'),
+        duration: params.get('duration'),
         correctedVrType: vrTypeValue,
         selectedDateTime: selectedDateTimeParam,
         fullName: params.get('fullName'),
@@ -261,11 +265,13 @@ const totalPrice = pricePerPerson * parsedNumberOfPeople;
         phoneNumber: params.get('phoneNumber')
       },
       fromSession: {
+        duration: sessionStorage.getItem('reservation_duration'),
         selectedDateTime: sessionStorage.getItem('reservation_selectedDateTime')
       },
       final: { 
         selectedDateTime: selectedDateTimeParam || storedDateTime,
         vrType: vrTypeValue,
+        duration: params.get('duration') || sessionStorage.getItem('reservation_duration'),
         numberOfPeople: params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople'),
         fullName: params.get('fullName') || sessionStorage.getItem('reservation_fullName'),
         email: params.get('email') || sessionStorage.getItem('reservation_email'),

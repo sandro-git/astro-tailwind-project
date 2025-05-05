@@ -158,6 +158,7 @@ const isSuccess = true;
     console.log('Confirmation - Paramètres URL:', {
       numberOfPeople: params.get('numberOfPeople'),
       vrType: params.get('vrType'),
+      duration: params.get('duration'),
       selectedDateTime: params.get('selectedDateTime'),
       fullName: params.get('fullName'),
       email: params.get('email'),
@@ -167,6 +168,7 @@ const isSuccess = true;
     console.log('Confirmation - Session Storage avant effacement:', {
       numberOfPeople: sessionStorage.getItem('reservation_numberOfPeople'),
       vrType: sessionStorage.getItem('reservation_vrType'),
+      duration: sessionStorage.getItem('reservation_duration'),
       selectedDateTime: sessionStorage.getItem('reservation_selectedDateTime'),
       fullName: sessionStorage.getItem('reservation_fullName'),
       email: sessionStorage.getItem('reservation_email'),
@@ -186,6 +188,7 @@ const isSuccess = true;
       const fields: FormField[] = [
         {name: 'numberOfPeople', displayId: 'numberOfPeopleDisplay', formatter: (value: string) => `${value} personne${parseInt(value) > 1 ? 's' : ''}`},
         {name: 'vrType', displayId: 'vrTypeDisplay', formatter: (value: string) => value === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard'},
+        {name: 'duration', displayId: 'durationDisplay', formatter: (value: string) => `${value} minutes`},
         {name: 'selectedDateTime', displayId: 'dateTimeDisplay', formatter: (value: string) => {
           try {
             const [datePart, timePart] = value.split('T');

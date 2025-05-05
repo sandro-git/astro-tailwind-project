@@ -148,6 +148,7 @@ if (selectedDateTime) {
     const params = new URLSearchParams(window.location.search);
     const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
     let vrType = params.get('vrType') || sessionStorage.getItem('reservation_vrType');
+    const duration = params.get('duration') || sessionStorage.getItem('reservation_duration');
     const selectedDateTime = params.get('selectedDateTime') || sessionStorage.getItem('reservation_selectedDateTime');
     
     // Force VR standard pour les groupes de plus de 4 personnes (côté client)
@@ -161,15 +162,17 @@ if (selectedDateTime) {
     console.log('Contact page: données récupérées', { 
       fromURL: { 
         numberOfPeople: params.get('numberOfPeople'), 
-        vrType: params.get('vrType'), 
+        vrType: params.get('vrType'),
+        duration: params.get('duration'),
         selectedDateTime: params.get('selectedDateTime') 
       },
       fromSession: {
         numberOfPeople: sessionStorage.getItem('reservation_numberOfPeople'),
         vrType: sessionStorage.getItem('reservation_vrType'),
+        duration: sessionStorage.getItem('reservation_duration'),
         selectedDateTime: sessionStorage.getItem('reservation_selectedDateTime')
       },
-      final: { numberOfPeople, vrType, selectedDateTime }
+      final: { numberOfPeople, vrType, duration, selectedDateTime }
     });
     
     // Update hidden inputs if we have the data
@@ -224,6 +227,26 @@ if (selectedDateTime) {
         console.log('Updated vrTypeDisplay:', displayElement.textContent);
       } else {
         console.error('vrTypeDisplay element not found');
+      }
+    }
+    
+    // Mettre à jour l'affichage pour la durée
+    if (duration) {
+      // Update hidden input if value comes from sessionStorage
+      if (!params.get('duration')) {
+        const hiddenInput = document.querySelector('input[name="duration"]');
+        if (hiddenInput instanceof HTMLInputElement) {
+          hiddenInput.value = duration;
+        }
+      }
+      
+      // Always update display regardless of data source
+      const displayElement = document.getElementById('durationDisplay');
+      if (displayElement) {
+        displayElement.textContent = `${duration} minutes`;
+        console.log('Updated durationDisplay:', displayElement.textContent);
+      } else {
+        console.error('durationDisplay element not found');
       }
     }
     
@@ -332,7 +355,7 @@ if (selectedDateTime) {
         const params = new URLSearchParams();
         
         // Ajouter les valeurs des étapes précédentes
-        const prevParams = ['numberOfPeople', 'vrType', 'selectedDateTime'];
+        const prevParams = ['numberOfPeople', 'vrType', 'duration', 'selectedDateTime'];
         prevParams.forEach(param => {
           const hiddenInput = contactForm.querySelector(`input[name="${param}"]`);
           if (hiddenInput instanceof HTMLInputElement && hiddenInput.value) {
