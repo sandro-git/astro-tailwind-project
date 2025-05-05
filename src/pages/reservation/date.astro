@@ -19,6 +19,7 @@ interface AvailableDate {
   dayNumber: number;
   month: string;
   timeSlots: TimeSlot[];
+  isSoon?: boolean;
 }
 
 // Create mock data instead of using Date constructor for TypeScript validation
@@ -29,13 +30,30 @@ const availableDates: AvailableDate[] = [];
 const dayNames = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
-// Generate next 14 days of available dates
-for (let i = 1; i <= 14; i++) {
-  const date = todayDate.add({ days: i });
-  const dateString = date.toString();
-  // Use hardcoded values instead of Date constructor
-  const dayIndex = (3 + i) % 7; // Starting from Wednesday
-  const monthIndex = 4; // May
+// This is a duplicate definition, removed
+
+// Generate today plus the next 90 days of available dates (to ensure multiple months)
+const now = new Date();
+const currentDay = now.getDate();
+const currentMonth = now.getMonth();
+const currentYear = now.getFullYear();
+
+// Generate dates starting from today (0) to 90 days in the future
+for (let i = 0; i <= 90; i++) {
+  // Create a new date object for each day
+  const futureDate = new Date(currentYear, currentMonth, currentDay + i);
+  const dateString = futureDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  // Get the day of week (0 = Sunday, 1 = Monday, etc.)
+  const dayOfWeek = futureDate.getDay();
+  // Convert to our array index (our array starts with Monday at 0)
+  const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  
+  // Get the actual month for this date
+  const monthIndex = futureDate.getMonth();
+  
+  // Format the day number
+  const dayNumber = futureDate.getDate();
   
   // Generate 3 time slots per day
   const timeSlots: TimeSlot[] = [
@@ -44,14 +62,18 @@ for (let i = 1; i <= 14; i++) {
     { time: '18:00', available: Math.random() > 0.3 }
   ];
   
-  // Only add dates with at least one available time slot
-  if (timeSlots.some(slot => slot.available)) {
+  // Determine if the date is within the next 7 days
+  const isNextWeek = i > 0 && i <= 7;
+  
+  // Only add dates with at least one available time slot and skip today
+  if (timeSlots.some(slot => slot.available) && i > 0) {
     availableDates.push({
       date: dateString,
       dayName: dayNames[dayIndex],
-      dayNumber: i + 1, // Starting from day 1
+      dayNumber: dayNumber,
       month: monthNames[monthIndex],
-      timeSlots
+      timeSlots,
+      isSoon: isNextWeek
     });
   }
 }
@@ -68,6 +90,21 @@ const datesByMonth = availableDates.reduce<GroupedDates>((acc, date) => {
   acc[month].push(date);
   return acc;
 }, {});
+
+// Define a consistent order for displaying months
+const monthOrder = monthNames.map(month => month.toLowerCase());
+
+// Sort months for display - this ensures September, October, etc. display properly
+const sortedDatesByMonth = Object.entries(datesByMonth).sort(([monthA], [monthB]) => {
+  const indexA = monthOrder.indexOf(monthA.toLowerCase());
+  const indexB = monthOrder.indexOf(monthB.toLowerCase());
+  return indexA - indexB;
+});
+
+// Capitalize first letter of month names for display
+const capitalizeMonth = (month) => {
+  return month.charAt(0).toUpperCase() + month.slice(1);
+};
 ---
 
 <ReservationLayout title="Réservation - Sélection de la date" currentStep={4}>
@@ -81,32 +118,93 @@ const datesByMonth = availableDates.reduce<GroupedDates>((acc, date) => {
       <h2 class="text-2xl font-bold text-gray-900 mb-4">Choisissez une date</h2>
       <p class="text-gray-600 mb-6">Sélectionnez la date de votre réservation</p>
       
-      <div class="calendar-container space-y-8">
-        {Object.entries(datesByMonth).map(([month, dates]: [string, AvailableDate[]]) => (
-          <div class="month-section">
-            <h3 class="text-lg font-medium text-gray-900 mb-3 capitalize">{month}</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-              {dates.map((date: AvailableDate) => (
-                <label class="date-card border rounded-lg overflow-hidden cursor-pointer">
+      <!-- Current month title (hidden) -->
+      <div class="current-month-title mb-6 hidden">
+        <h3 class="text-xl font-medium text-gray-800 capitalize">
+          {monthNames[new Date().getMonth()]}
+        </h3>
+      </div>
+      
+      <!-- Month selector -->
+      <div class="month-selector mb-6">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {(() => {
+            // Get current date information
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            
+            // Get all available months and sort them chronologically
+            const availableMonths = Object.keys(datesByMonth)
+              .map(monthName => {
+                const monthIndex = monthNames.indexOf(monthName);
+                return {
+                  name: monthName,
+                  index: monthIndex,
+                  year: monthIndex < currentMonth ? currentYear + 1 : currentYear,
+                  isCurrent: monthIndex === currentMonth
+                };
+              })
+              .sort((a, b) => {
+                // Sort by year first, then by month index
+                if (a.year !== b.year) return a.year - b.year;
+                return a.index - b.index;
+              });
+              
+            // Use the month order defined by monthNames
+            const sortedMonths = [...availableMonths].sort((a, b) => {
+              return monthOrder.indexOf(a.name.toLowerCase()) - monthOrder.indexOf(b.name.toLowerCase());
+            });
+            
+            // Return month options
+            return sortedMonths.map(month => (
+              <button 
+                type="button"
+                class={`month-button py-2 px-4 rounded-lg text-center transition-all w-full ${month.isCurrent ? 
+                  'bg-blue-100 text-blue-700 font-bold border-2 border-blue-500' : 
+                  'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'}`}
+                data-month={month.name}
+              >
+                {capitalizeMonth(month.name)}
+              </button>
+            ));
+          })()}
+        </div>
+      </div>
+      
+      <div class="calendar-container">
+        {sortedDatesByMonth.map(([month, dates]: [string, AvailableDate[]]) => {
+          // Sort dates by date string (YYYY-MM-DD format)
+          const sortedDates = [...dates].sort((a, b) => 
+            a.date.localeCompare(b.date)
+          );
+          
+          return (
+            <div class="month-section pb-6 transition-all duration-300 ease-in-out" data-month={month}>
+              <!-- Month headers removed from day container -->
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                {sortedDates.map((date: AvailableDate) => (
+                <label class="date-card border rounded-lg overflow-hidden cursor-pointer hover:border-blue-400 hover:shadow-sm transition-all duration-200">
                   <input 
                     type="radio" 
                     name="selectedDate" 
                     value={date.date} 
-                    class="date-radio sr-only peer" 
+                    class="date-radio sr-only" 
                     required
                     data-date={date.date}
                   />
-                  <div class="date-content peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700">
-                    <div class="date-header bg-gray-100 p-3 text-center peer-checked:bg-blue-100">
-                      <div class="text-xs text-gray-500 capitalize">{date.dayName}</div>
-                      <div class="text-lg font-bold">{date.dayNumber}</div>
+                  <div class="date-content h-full transition-all duration-200">
+                    <div class="date-header p-4 text-center bg-white flex flex-col items-center justify-center h-full">
+                      <div class="text-xs text-gray-500 capitalize mb-1">{date.dayName}</div>
+                      <div class="text-xl font-bold">{date.dayNumber}</div>
                     </div>
                   </div>
                 </label>
               ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
     
@@ -155,6 +253,18 @@ const datesByMonth = availableDates.reduce<GroupedDates>((acc, date) => {
     // Handle date selection
     const radioButtons = document.querySelectorAll('.date-radio');
     const continueButton = document.getElementById('continueButton');
+    const dateCards = document.querySelectorAll('.date-card');
+    
+    // Make the labels/cards clickable and trigger the radio button inside
+    dateCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const radio = card.querySelector('.date-radio');
+        if (radio instanceof HTMLInputElement) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change'));
+        }
+      });
+    });
     
     radioButtons.forEach(radio => {
       radio.addEventListener('change', () => {
@@ -169,6 +279,22 @@ const datesByMonth = availableDates.reduce<GroupedDates>((acc, date) => {
           
           // Store selection in session storage for persistence
           sessionStorage.setItem('reservation_selectedDate', radio.value);
+          
+          // Reset all other cards
+          document.querySelectorAll('.date-radio').forEach(r => {
+            if (r instanceof HTMLInputElement && r !== radio) {
+              const parentLabel = r.closest('.date-card');
+              if (parentLabel) {
+                parentLabel.classList.remove('ring-2', 'ring-blue-500');
+              }
+            }
+          });
+          
+          // Highlight selected card
+          const parentLabel = radio.closest('.date-card');
+          if (parentLabel) {
+            parentLabel.classList.add('ring-2', 'ring-blue-500');
+          }
           
           console.log('Date sélectionnée:', radio.value);
         }
@@ -187,6 +313,21 @@ const datesByMonth = availableDates.reduce<GroupedDates>((acc, date) => {
         radioToSelect.checked = true;
         // Trigger change event to update button state
         radioToSelect.dispatchEvent(new Event('change'));
+        
+        // Get the month of the selected date and select it in the buttons
+        const monthSection = radioToSelect.closest('.month-section');
+        if (monthSection) {
+          const selectedMonth = monthSection.getAttribute('data-month');
+          if (selectedMonth) {
+            // Find the month button with this data-month attribute
+            const monthButtonToSelect = document.querySelector(`.month-button[data-month="${selectedMonth}"]`);
+            if (monthButtonToSelect) {
+              // Simulate a click on this button to show the related month section
+              monthButtonToSelect.click();
+            }
+          }
+        }
+        
         console.log('Date présélectionnée avec succès:', savedDate);
       } else {
         console.log('Bouton radio correspondant non trouvé');
@@ -194,6 +335,108 @@ const datesByMonth = availableDates.reduce<GroupedDates>((acc, date) => {
     } else {
       console.log('Aucune date sauvegardée trouvée');
     }
+    
+    // Handle month selection
+    const monthButtons = document.querySelectorAll('.month-button');
+    const monthSections = document.querySelectorAll('.month-section');
+    
+    // Function to get the current month name in French
+    const getCurrentMonthName = () => {
+      // Get current month name from our defined array for consistency
+      const monthIndex = new Date().getMonth();
+      const monthName = monthNames[monthIndex];
+      return monthName.toLowerCase();
+    };
+    
+    // Function to show month buttons at top but only show current month section
+    const showTopMonthsButOnlyCurrentSection = () => {
+      const currentMonthName = getCurrentMonthName();
+      
+      // Show all month buttons but highlight current one
+      let firstButton = null;
+      let currentButton = null;
+      
+      monthButtons.forEach(button => {
+        if (!firstButton) firstButton = button;
+        
+        const buttonMonth = button.getAttribute('data-month');
+        if (buttonMonth && buttonMonth.toLowerCase() === currentMonthName) {
+          currentButton = button;
+          // Highlight current month button
+          button.classList.add('bg-blue-100', 'text-blue-700', 'font-bold', 'border-2', 'border-blue-500');
+          button.classList.remove('bg-gray-100', 'text-gray-700', 'border', 'border-gray-300');
+        } else {
+          // Regular styling for other months
+          button.classList.remove('bg-blue-100', 'text-blue-700', 'font-bold', 'border-2', 'border-blue-500');
+          button.classList.add('bg-gray-100', 'text-gray-700', 'border', 'border-gray-300');
+        }
+      });
+      
+      // Use current month button or fallback to first button if current month not found
+      const activeButton = currentButton || firstButton;
+      if (activeButton) {
+        const selectedMonth = activeButton.getAttribute('data-month');
+        
+        // Only show the selected month's section
+        monthSections.forEach(section => {
+          const sectionMonth = section.getAttribute('data-month');
+          if (sectionMonth && sectionMonth.toLowerCase() === selectedMonth.toLowerCase()) {
+            section.style.display = 'block';
+          } else {
+            section.style.display = 'none';
+          }
+        });
+      }
+    };
+    
+    // Add click handlers for month buttons
+    monthButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const selectedMonth = button.getAttribute('data-month');
+        if (selectedMonth) {
+          // When clicked, we want to show this month's section and hide others
+          // Update button styles
+          monthButtons.forEach(btn => {
+            const btnMonth = btn.getAttribute('data-month');
+            const isSelected = btnMonth === selectedMonth;
+            
+            if (isSelected) {
+              btn.classList.add('bg-blue-100', 'text-blue-700', 'font-bold', 'border-2', 'border-blue-500');
+              btn.classList.remove('bg-gray-100', 'text-gray-700', 'border', 'border-gray-300');
+            } else {
+              btn.classList.remove('bg-blue-100', 'text-blue-700', 'font-bold', 'border-2', 'border-blue-500');
+              btn.classList.add('bg-gray-100', 'text-gray-700', 'border', 'border-gray-300');
+            }
+          });
+          
+          // Show only the selected month section
+          monthSections.forEach(section => {
+            const sectionMonth = section.getAttribute('data-month');
+            if (sectionMonth && sectionMonth.toLowerCase() === selectedMonth.toLowerCase()) {
+              // Show this section
+              section.style.display = 'block';
+            } else {
+              // Hide all other sections
+              section.style.display = 'none';
+            }
+          });
+        }
+      });
+    });
+    
+    // Initialize the UI - show all months but only current month's days
+    showTopMonthsButOnlyCurrentSection();
+    
+    // Initially hide all month sections except the current month
+    const currentMonthName = getCurrentMonthName();
+    monthSections.forEach(section => {
+      const sectionMonth = section.getAttribute('data-month');
+      if (sectionMonth && sectionMonth.toLowerCase() === currentMonthName) {
+        section.style.display = 'block';
+      } else {
+        section.style.display = 'none';
+      }
+    });
     
     // Vérifier le formulaire avant soumission
     const dateForm = document.getElementById('dateForm');

@@ -60,4 +60,6 @@ Création d'un système de réservation permettant aux utilisateurs de:
 - 3-4 personnes: 27€/personne
 - 5-6 personnes: 25€/personne
 
-##
+## instructions
+
+- ne lance pas le server.
