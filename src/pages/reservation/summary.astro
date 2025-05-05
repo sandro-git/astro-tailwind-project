@@ -274,7 +274,7 @@ const totalPrice = pricePerPerson * parsedNumberOfPeople;
     });
     
     // Function to format and display the date
-    const formatAndDisplayDateTime = (dateTimeValue) => {
+    const formatAndDisplayDateTime = (dateTimeValue: string) => {
       if (!dateTimeValue) return;
       
       const dateTimeDisplay = document.getElementById('dateTimeDisplay');
@@ -421,12 +421,18 @@ const totalPrice = pricePerPerson * parsedNumberOfPeople;
         
         // Déboguer les valeurs finales avant soumission
         console.log('Valeurs finales du formulaire avant soumission:', {
-          numberOfPeople: summaryForm.querySelector('input[name="numberOfPeople"]')?.value,
-          vrType: summaryForm.querySelector('input[name="vrType"]')?.value,
-          selectedDateTime: summaryForm.querySelector('input[name="selectedDateTime"]')?.value,
-          fullName: summaryForm.querySelector('input[name="fullName"]')?.value,
-          email: summaryForm.querySelector('input[name="email"]')?.value,
-          phoneNumber: summaryForm.querySelector('input[name="phoneNumber"]')?.value
+          numberOfPeople: summaryForm.querySelector('input[name="numberOfPeople"]') instanceof HTMLInputElement ? 
+            (summaryForm.querySelector('input[name="numberOfPeople"]') as HTMLInputElement).value : undefined,
+          vrType: summaryForm.querySelector('input[name="vrType"]') instanceof HTMLInputElement ? 
+            (summaryForm.querySelector('input[name="vrType"]') as HTMLInputElement).value : undefined,
+          selectedDateTime: summaryForm.querySelector('input[name="selectedDateTime"]') instanceof HTMLInputElement ? 
+            (summaryForm.querySelector('input[name="selectedDateTime"]') as HTMLInputElement).value : undefined,
+          fullName: summaryForm.querySelector('input[name="fullName"]') instanceof HTMLInputElement ? 
+            (summaryForm.querySelector('input[name="fullName"]') as HTMLInputElement).value : undefined,
+          email: summaryForm.querySelector('input[name="email"]') instanceof HTMLInputElement ? 
+            (summaryForm.querySelector('input[name="email"]') as HTMLInputElement).value : undefined,
+          phoneNumber: summaryForm.querySelector('input[name="phoneNumber"]') instanceof HTMLInputElement ? 
+            (summaryForm.querySelector('input[name="phoneNumber"]') as HTMLInputElement).value : undefined
         });
         
         // Construire l'URL manuellement

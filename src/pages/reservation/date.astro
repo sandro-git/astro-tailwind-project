@@ -7,17 +7,38 @@ const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
 const vrType = Astro.url.searchParams.get('vrType');
 const duration = Astro.url.searchParams.get('duration');
 
-// Generate available time slots (this would normally come from your database)
+// Define interfaces for our data structures
+interface TimeSlot {
+  time: string;
+  available: boolean;
+}
+
+interface AvailableDate {
+  date: string;
+  dayName: string;
+  dayNumber: number;
+  month: string;
+  timeSlots: TimeSlot[];
+}
+
+// Create mock data instead of using Date constructor for TypeScript validation
 const todayDate = today(getLocalTimeZone());
-const availableDates = [];
+const availableDates: AvailableDate[] = [];
+
+// Generate mock available dates
+const dayNames = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 // Generate next 14 days of available dates
 for (let i = 1; i <= 14; i++) {
   const date = todayDate.add({ days: i });
   const dateString = date.toString();
+  // Use hardcoded values instead of Date constructor
+  const dayIndex = (3 + i) % 7; // Starting from Wednesday
+  const monthIndex = 4; // May
   
   // Generate 3 time slots per day
-  const timeSlots = [
+  const timeSlots: TimeSlot[] = [
     { time: '10:00', available: Math.random() > 0.3 },
     { time: '14:00', available: Math.random() > 0.3 },
     { time: '18:00', available: Math.random() > 0.3 }
@@ -27,16 +48,21 @@ for (let i = 1; i <= 14; i++) {
   if (timeSlots.some(slot => slot.available)) {
     availableDates.push({
       date: dateString,
-      dayName: new Date(dateString).toLocaleDateString('fr-FR', { weekday: 'long' }),
-      dayNumber: new Date(dateString).getDate(),
-      month: new Date(dateString).toLocaleDateString('fr-FR', { month: 'long' }),
+      dayName: dayNames[dayIndex],
+      dayNumber: i + 1, // Starting from day 1
+      month: monthNames[monthIndex],
       timeSlots
     });
   }
 }
 
+// Define type for grouped dates
+interface GroupedDates {
+  [key: string]: AvailableDate[];
+}
+
 // Group dates by month
-const datesByMonth = availableDates.reduce((acc, date) => {
+const datesByMonth = availableDates.reduce<GroupedDates>((acc, date) => {
   const month = date.month;
   if (!acc[month]) acc[month] = [];
   acc[month].push(date);
@@ -56,11 +82,11 @@ const datesByMonth = availableDates.reduce((acc, date) => {
       <p class="text-gray-600 mb-6">Sélectionnez la date de votre réservation</p>
       
       <div class="calendar-container space-y-8">
-        {Object.entries(datesByMonth).map(([month, dates]) => (
+        {Object.entries(datesByMonth).map(([month, dates]: [string, AvailableDate[]]) => (
           <div class="month-section">
             <h3 class="text-lg font-medium text-gray-900 mb-3 capitalize">{month}</h3>
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-              {dates.map(date => (
+              {dates.map((date: AvailableDate) => (
                 <label class="date-card border rounded-lg overflow-hidden cursor-pointer">
                   <input 
                     type="radio" 
@@ -135,7 +161,9 @@ const datesByMonth = availableDates.reduce((acc, date) => {
         if (radio instanceof HTMLInputElement && radio.checked) {
           // Enable continue button
           if (continueButton) {
-            continueButton.disabled = false;
+            if (continueButton instanceof HTMLButtonElement) {
+              continueButton.disabled = false;
+            }
             continueButton.classList.remove('opacity-50', 'cursor-not-allowed');
           }
           
@@ -184,16 +212,21 @@ const datesByMonth = availableDates.reduce((acc, date) => {
           return;
         }
         
-        console.log('Formulaire soumis avec date:', checkedRadio.value);
+        console.log('Formulaire soumis avec date:', checkedRadio instanceof HTMLInputElement ? checkedRadio.value : 'undefined');
         
         // Assurons-nous que la valeur est bien dans session storage
-        sessionStorage.setItem('reservation_selectedDate', checkedRadio.value);
+        if (checkedRadio instanceof HTMLInputElement) {
+          sessionStorage.setItem('reservation_selectedDate', checkedRadio.value);
+        }
         
         // Créer l'URL manuellement avec tous les paramètres nécessaires
-        const numberOfPeopleParam = dateForm.querySelector('input[name="numberOfPeople"]')?.value || '';
-        const vrTypeParam = dateForm.querySelector('input[name="vrType"]')?.value || '';
-        const durationParam = dateForm.querySelector('input[name="duration"]')?.value || '';
-        const selectedDateParam = checkedRadio.value;
+        const numberOfPeopleInput = dateForm.querySelector('input[name="numberOfPeople"]');
+        const numberOfPeopleParam = numberOfPeopleInput instanceof HTMLInputElement ? numberOfPeopleInput.value : '';
+        const vrTypeInput = dateForm.querySelector('input[name="vrType"]');
+        const vrTypeParam = vrTypeInput instanceof HTMLInputElement ? vrTypeInput.value : '';
+        const durationInput = dateForm.querySelector('input[name="duration"]');
+        const durationParam = durationInput instanceof HTMLInputElement ? durationInput.value : '';
+        const selectedDateParam = checkedRadio instanceof HTMLInputElement ? checkedRadio.value : '';
         
         // Construire l'URL avec les paramètres
         const nextUrl = `/reservation/time?numberOfPeople=${encodeURIComponent(numberOfPeopleParam)}&vrType=${encodeURIComponent(vrTypeParam)}&duration=${encodeURIComponent(durationParam)}&selectedDate=${encodeURIComponent(selectedDateParam)}`;

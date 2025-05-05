@@ -175,11 +175,18 @@ const isSuccess = true;
     
     // Mettre à jour l'affichage avec les valeurs manquantes
     const updateDisplayFromStorage = () => {
+      // Define types for better TypeScript support
+      interface FormField {
+        name: string;
+        displayId: string;
+        formatter: (value: string, allValues?: Record<string, string>) => string;
+      }
+      
       // Liste des champs et leurs éléments d'affichage
-      const fields = [
-        {name: 'numberOfPeople', displayId: 'numberOfPeopleDisplay', formatter: value => `${value} personne${parseInt(value) > 1 ? 's' : ''}`},
-        {name: 'vrType', displayId: 'vrTypeDisplay', formatter: value => value === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard'},
-        {name: 'selectedDateTime', displayId: 'dateTimeDisplay', formatter: value => {
+      const fields: FormField[] = [
+        {name: 'numberOfPeople', displayId: 'numberOfPeopleDisplay', formatter: (value: string) => `${value} personne${parseInt(value) > 1 ? 's' : ''}`},
+        {name: 'vrType', displayId: 'vrTypeDisplay', formatter: (value: string) => value === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard'},
+        {name: 'selectedDateTime', displayId: 'dateTimeDisplay', formatter: (value: string) => {
           try {
             const [datePart, timePart] = value.split('T');
             const date = new Date(datePart);
@@ -195,13 +202,13 @@ const isSuccess = true;
             return value;
           }
         }},
-        {name: 'fullName', displayId: 'fullNameDisplay', formatter: value => value},
-        {name: 'email', displayId: 'emailDisplay', formatter: value => value},
-        {name: 'phoneNumber', displayId: 'phoneNumberDisplay', formatter: value => value},
+        {name: 'fullName', displayId: 'fullNameDisplay', formatter: (value: string) => value},
+        {name: 'email', displayId: 'emailDisplay', formatter: (value: string) => value},
+        {name: 'phoneNumber', displayId: 'phoneNumberDisplay', formatter: (value: string) => value},
         // Ajout d'un champ virtuel pour le prix total
-        {name: 'totalPrice', displayId: 'totalPriceDisplay', formatter: (_, allValues) => {
+        {name: 'totalPrice', displayId: 'totalPriceDisplay', formatter: (_: string, allValues?: Record<string, string>) => {
           // Calculer le prix total en fonction du nombre de personnes
-          const numPeople = parseInt(allValues.numberOfPeople || '0');
+          const numPeople = parseInt(allValues?.numberOfPeople || '0');
           
           // Déterminer le prix par personne selon le nombre de personnes
           let pricePerPerson;
@@ -222,7 +229,7 @@ const isSuccess = true;
       ];
       
       // Collecter toutes les valeurs d'abord pour pouvoir les utiliser pour des calculs
-      const allValues = {};
+      const allValues: Record<string, string> = {};
       
       fields.forEach(field => {
         if (field.name === 'totalPrice') return; // Ignorer le champ virtuel pour l'instant

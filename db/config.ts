@@ -10,7 +10,7 @@ export const Reservations = defineTable({
     fullName: column.text(),
     email: column.text(),
     phoneNumber: column.text(),
-    createdAt: column.date({ default: () => new Date() }),
+    createdAt: column.date(),
     status: column.text({ default: 'PENDING' }), // 'PENDING', 'CONFIRMED', 'CANCELLED'
   }
 });
@@ -40,7 +40,7 @@ export const Users = defineTable({
     fullName: column.text(),
     email: column.text({ unique: true }),
     phoneNumber: column.text(),
-    createdAt: column.date({ default: () => new Date() }),
+    createdAt: column.date(),
   }
 });
 

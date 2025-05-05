@@ -83,7 +83,7 @@ const vrType = Astro.url.searchParams.get('vrType');
     
     // Ajouter un gestionnaire d'événement pour la soumission du formulaire
     if (durationForm instanceof HTMLFormElement) {
-      durationForm.addEventListener('submit', (e) => {
+      durationForm.addEventListener('submit', () => {
         // Récupérer la valeur sélectionnée
         const selectedRadio = document.querySelector('input[name="duration"]:checked');
         if (selectedRadio instanceof HTMLInputElement) {

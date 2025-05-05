@@ -69,7 +69,7 @@ import ReservationLayout from '../../layouts/ReservationLayout.astro';
     
     // Ajouter un gestionnaire d'événement pour la soumission du formulaire
     if (peopleForm instanceof HTMLFormElement) {
-      peopleForm.addEventListener('submit', (e) => {
+      peopleForm.addEventListener('submit', () => {
         // Récupérer la valeur sélectionnée
         const selectedRadio = document.querySelector('input[name="numberOfPeople"]:checked');
         if (selectedRadio instanceof HTMLInputElement) {

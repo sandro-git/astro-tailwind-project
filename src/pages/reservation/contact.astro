@@ -64,7 +64,7 @@ if (selectedDateTime) {
           </div>
           <div class="ml-3">
             <p class="text-sm text-blue-700">
-              Votre réservation : <span class="font-medium" id="numPeopleDisplay">{numberOfPeople} personne{parseInt(numberOfPeople) > 1 ? 's' : ''}</span> • 
+              Votre réservation : <span class="font-medium" id="numPeopleDisplay">{numberOfPeople} personne{numberOfPeople && parseInt(numberOfPeople) > 1 ? 's' : ''}</span> • 
               <span class="font-medium" id="vrTypeDisplay">{vrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard'}</span> • 
               <span class="font-medium" id="durationDisplay">{duration} minutes</span> • 
               <span class="font-medium" id="dateTimeDisplay">{formattedDate ? `${formattedDate} à ${formattedTime}` : 'Chargement de la date...'}</span>
