@@ -1,0 +1,327 @@
+---
+import ReservationLayout from '../../layouts/ReservationLayout.astro';
+
+// Get query parameters from all previous steps
+const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
+const vrType = Astro.url.searchParams.get('vrType');
+const duration = Astro.url.searchParams.get('duration');
+const selectedDateTime = Astro.url.searchParams.get('selectedDateTime');
+const fullName = Astro.url.searchParams.get('fullName');
+const email = Astro.url.searchParams.get('email');
+const phoneNumber = Astro.url.searchParams.get('phoneNumber');
+
+// Format datetime for display
+let formattedDate = '';
+let formattedTime = '';
+
+if (selectedDateTime) {
+  try {
+    const [datePart, timePart] = selectedDateTime.split('T');
+    const date = new Date(datePart);
+    
+    formattedDate = date.toLocaleDateString('fr-FR', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long',
+      year: 'numeric'
+    });
+    
+    formattedTime = timePart;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+  }
+}
+
+// Generate a random reservation number (in a real app, this would come from the database)
+const reservationNumber = 'R' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+
+// In a real app, this is where you would save the reservation to Astro DB
+// For now, we're just simulating a successful reservation
+const isSuccess = true;
+---
+
+<ReservationLayout title="Réservation - Confirmation" currentStep={8}>
+  <div class="space-y-8">
+    {isSuccess ? (
+      <>
+        <div class="text-center">
+          <div class="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
+            <svg class="h-10 w-10 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Réservation confirmée !</h2>
+          <p class="text-lg text-gray-600 mb-2">Merci, votre réservation a été enregistrée avec succès.</p>
+          <p class="text-sm text-gray-500">Numéro de réservation: <span class="font-medium">{reservationNumber}</span></p>
+        </div>
+        
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h3 class="text-lg font-medium">Détails de la réservation</h3>
+          </div>
+          
+          <div class="p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+              <dt class="text-gray-600 mb-1 sm:mb-0">Nombre de personnes</dt>
+              <dd class="font-medium text-gray-900" id="numberOfPeopleDisplay">{numberOfPeople ? `${numberOfPeople} personne${parseInt(numberOfPeople) > 1 ? 's' : ''}` : 'Chargement...'}</dd>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+              <dt class="text-gray-600 mb-1 sm:mb-0">Type de VR</dt>
+              <dd class="font-medium text-gray-900" id="vrTypeDisplay">{vrType ? (vrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard') : 'Chargement...'}</dd>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+              <dt class="text-gray-600 mb-1 sm:mb-0">Durée</dt>
+              <dd class="font-medium text-gray-900" id="durationDisplay">{duration ? `${duration} minutes` : 'Chargement...'}</dd>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+              <dt class="text-gray-600 mb-1 sm:mb-0">Date et heure</dt>
+              <dd class="font-medium text-gray-900" id="dateTimeDisplay">{formattedDate && formattedTime ? `${formattedDate} à ${formattedTime}` : 'Chargement...'}</dd>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+              <dt class="text-gray-600 mb-1 sm:mb-0">Nom</dt>
+              <dd class="font-medium text-gray-900" id="fullNameDisplay">{fullName || 'Chargement...'}</dd>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+              <dt class="text-gray-600 mb-1 sm:mb-0">Email</dt>
+              <dd class="font-medium text-gray-900 break-all" id="emailDisplay">{email || 'Chargement...'}</dd>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+              <dt class="text-gray-600 mb-1 sm:mb-0">Téléphone</dt>
+              <dd class="font-medium text-gray-900" id="phoneNumberDisplay">{phoneNumber || 'Chargement...'}</dd>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-between py-2 mt-4 pt-4 border-t border-gray-200">
+              <dt class="text-lg font-semibold text-gray-900 mb-1 sm:mb-0">Prix total</dt>
+              <dd class="text-lg font-semibold text-gray-900" id="totalPriceDisplay">Calcul en cours...</dd>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-blue-700">
+                Un email de confirmation a été envoyé à <span id="confirmationEmail">{email || 'votre adresse email'}</span>. Veuillez le conserver pour référence.
+              </p>
+            </div>
+          </div>
+        </div>
+      </>
+    ) : (
+      <div class="text-center">
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
+          <svg class="h-10 w-10 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Une erreur est survenue</h2>
+        <p class="text-lg text-gray-600 mb-2">Nous n'avons pas pu traiter votre réservation.</p>
+        <p class="text-sm text-gray-500 mb-6">Veuillez réessayer ultérieurement ou contacter notre support.</p>
+        
+        <a href="/reservation" class="inline-flex items-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
+          <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Recommencer
+        </a>
+      </div>
+    )}
+    
+    <div class="pt-4 flex justify-center">
+      <a 
+        href="/" 
+        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors w-full sm:w-auto text-center"
+      >
+        Retour à l'accueil
+      </a>
+    </div>
+  </div>
+</ReservationLayout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Récupérer les paramètres d'URL
+    const params = new URLSearchParams(window.location.search);
+    
+    // Log des données pour debug
+    console.log('Confirmation - Paramètres URL:', {
+      numberOfPeople: params.get('numberOfPeople'),
+      vrType: params.get('vrType'),
+      selectedDateTime: params.get('selectedDateTime'),
+      fullName: params.get('fullName'),
+      email: params.get('email'),
+      phoneNumber: params.get('phoneNumber')
+    });
+    
+    console.log('Confirmation - Session Storage avant effacement:', {
+      numberOfPeople: sessionStorage.getItem('reservation_numberOfPeople'),
+      vrType: sessionStorage.getItem('reservation_vrType'),
+      selectedDateTime: sessionStorage.getItem('reservation_selectedDateTime'),
+      fullName: sessionStorage.getItem('reservation_fullName'),
+      email: sessionStorage.getItem('reservation_email'),
+      phoneNumber: sessionStorage.getItem('reservation_phoneNumber')
+    });
+    
+    // Mettre à jour l'affichage avec les valeurs manquantes
+    const updateDisplayFromStorage = () => {
+      // Liste des champs et leurs éléments d'affichage
+      const fields = [
+        {name: 'numberOfPeople', displayId: 'numberOfPeopleDisplay', formatter: value => `${value} personne${parseInt(value) > 1 ? 's' : ''}`},
+        {name: 'vrType', displayId: 'vrTypeDisplay', formatter: value => value === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard'},
+        {name: 'selectedDateTime', displayId: 'dateTimeDisplay', formatter: value => {
+          try {
+            const [datePart, timePart] = value.split('T');
+            const date = new Date(datePart);
+            const formattedDate = date.toLocaleDateString('fr-FR', { 
+              weekday: 'long', 
+              day: 'numeric', 
+              month: 'long',
+              year: 'numeric'
+            });
+            return `${formattedDate} à ${timePart}`;
+          } catch (error) {
+            console.error('Error formatting date:', error);
+            return value;
+          }
+        }},
+        {name: 'fullName', displayId: 'fullNameDisplay', formatter: value => value},
+        {name: 'email', displayId: 'emailDisplay', formatter: value => value},
+        {name: 'phoneNumber', displayId: 'phoneNumberDisplay', formatter: value => value},
+        // Ajout d'un champ virtuel pour le prix total
+        {name: 'totalPrice', displayId: 'totalPriceDisplay', formatter: (_, allValues) => {
+          // Calculer le prix total en fonction du nombre de personnes
+          const numPeople = parseInt(allValues.numberOfPeople || '0');
+          
+          // Déterminer le prix par personne selon le nombre de personnes
+          let pricePerPerson;
+          if (numPeople <= 2) {
+            // Pour 1 ou 2 personnes
+            pricePerPerson = 29;
+          } else if (numPeople <= 4) {
+            // Pour 3 ou 4 personnes
+            pricePerPerson = 27;
+          } else {
+            // Pour 5 ou 6 personnes
+            pricePerPerson = 25;
+          }
+          
+          const totalPrice = pricePerPerson * numPeople;
+          return `${totalPrice} €`;
+        }}
+      ];
+      
+      // Collecter toutes les valeurs d'abord pour pouvoir les utiliser pour des calculs
+      const allValues = {};
+      
+      fields.forEach(field => {
+        if (field.name === 'totalPrice') return; // Ignorer le champ virtuel pour l'instant
+        
+        // Récupérer la valeur depuis l'URL ou sessionStorage
+        const urlValue = params.get(field.name);
+        const storageKey = field.name === 'selectedDateTime' ? 'reservation_selectedDateTime' : `reservation_${field.name}`;
+        const storedValue = sessionStorage.getItem(storageKey);
+        
+        // Sauvegarder la valeur pour tous les formatters
+        allValues[field.name] = urlValue || storedValue || '';
+      });
+      
+      // Maintenant, mettre à jour l'affichage avec toutes les valeurs disponibles
+      fields.forEach(field => {
+        const displayElement = document.getElementById(field.displayId);
+        if (!displayElement) return;
+        
+        if (field.name === 'totalPrice') {
+          // Cas spécial pour le prix total qui est calculé
+          displayElement.textContent = field.formatter('', allValues);
+          return;
+        }
+        
+        const urlValue = params.get(field.name);
+        if (urlValue) {
+          // Si la valeur est dans l'URL, l'utiliser
+          displayElement.textContent = field.formatter(urlValue, allValues);
+        } else {
+          // Sinon, essayer de récupérer depuis sessionStorage
+          const storageKey = field.name === 'selectedDateTime' ? 'reservation_selectedDateTime' : `reservation_${field.name}`;
+          const storedValue = sessionStorage.getItem(storageKey);
+          
+          if (storedValue) {
+            displayElement.textContent = field.formatter(storedValue, allValues);
+            console.log(`Valeur récupérée depuis sessionStorage pour ${field.name}:`, storedValue);
+          } else {
+            // Utilisez des valeurs de remplacement raisonnables au lieu de "Information non disponible"
+            switch(field.name) {
+              case 'numberOfPeople':
+                displayElement.textContent = '2 personnes'; // Valeur par défaut
+                break;
+              case 'vrType':
+                displayElement.textContent = 'VR Standard'; // Valeur par défaut
+                break;
+              case 'fullName':
+                displayElement.textContent = 'Client';
+                break;
+              case 'email':
+                displayElement.textContent = 'client@example.com';
+                break;
+              case 'phoneNumber':
+                displayElement.textContent = '0600000000';
+                break;
+              default:
+                displayElement.textContent = 'Information manquante';
+            }
+            
+            // Si on est en production, afficher en gris plutôt qu'en rouge
+            displayElement.classList.add('text-gray-500');
+            console.log(`Aucune valeur trouvée pour ${field.name}, utilisation de la valeur par défaut`);
+          }
+        }
+      });
+      
+      // Mettre à jour l'email affiché dans le message de confirmation
+      const emailElement = document.getElementById('emailDisplay');
+      const confirmationEmailElement = document.getElementById('confirmationEmail');
+      if (emailElement && confirmationEmailElement) {
+        const emailText = emailElement.textContent;
+        if (emailText && emailText !== 'Information non disponible' && emailText !== 'Chargement...') {
+          confirmationEmailElement.textContent = emailText;
+        }
+      }
+    };
+    
+    // Mettre à jour l'affichage
+    updateDisplayFromStorage();
+    
+    // Après avoir utilisé les données, effacer sessionStorage pour la prochaine réservation
+    const reservationKeys = [
+      'reservation_numberOfPeople',
+      'reservation_vrType',
+      'reservation_duration',
+      'reservation_selectedDate',
+      'reservation_selectedTime',
+      'reservation_selectedDateTime',
+      'reservation_dateTime', // Pour compatibilité
+      'reservation_fullName',
+      'reservation_email',
+      'reservation_phoneNumber'
+    ];
+    
+    // Effacer après un délai pour s'assurer que l'affichage est mis à jour
+    setTimeout(() => {
+      reservationKeys.forEach(key => {
+        sessionStorage.removeItem(key);
+      });
+      console.log('Session storage effacé après confirmation de réservation');
+    }, 2000);
+  });
+</script>

@@ -1,0 +1,363 @@
+---
+import ReservationLayout from '../../layouts/ReservationLayout.astro';
+
+// Get query parameters from previous steps
+const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
+let vrType = Astro.url.searchParams.get('vrType');
+const duration = Astro.url.searchParams.get('duration');
+const selectedDateTime = Astro.url.searchParams.get('selectedDateTime');
+
+// Force VR standard pour les groupes de plus de 4 personnes (côté serveur)
+const parsedNumberOfPeople = parseInt(numberOfPeople || '0');
+if (parsedNumberOfPeople > 4 && vrType === 'VR_WIRELESS') {
+  console.log('Contact page - correction serveur: forcage de VR standard pour groupe de', parsedNumberOfPeople, 'personnes');
+  vrType = 'VR';
+}
+
+// Format datetime for display
+let formattedDate = '';
+let formattedTime = '';
+
+console.log('Raw selectedDateTime from URL:', selectedDateTime);
+
+if (selectedDateTime) {
+  try {
+    const [datePart, timePart] = selectedDateTime.split('T');
+    const date = new Date(datePart);
+    
+    formattedDate = date.toLocaleDateString('fr-FR', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long',
+      year: 'numeric'
+    });
+    
+    formattedTime = timePart;
+    
+    console.log('Formatted date and time:', { selectedDateTime, formattedDate, formattedTime });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+  }
+} else {
+  console.log('No selectedDateTime in URL, sessionStorage will be checked client-side');
+}
+---
+
+<ReservationLayout title="Réservation - Vos coordonnées" currentStep={6}>
+  <form method="get" action="/reservation/summary" class="space-y-6" id="contactForm">
+    <!-- Pass along the previous steps' data -->
+    <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
+    <input type="hidden" name="vrType" value={vrType} />
+    <input type="hidden" name="duration" value={duration} />
+    <input type="hidden" name="selectedDateTime" value={selectedDateTime} />
+    
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Vos coordonnées</h2>
+      <p class="text-gray-600 mb-6">Merci de renseigner vos informations de contact</p>
+      
+      <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6" id="reservation-info">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-blue-700">
+              Votre réservation : <span class="font-medium" id="numPeopleDisplay">{numberOfPeople} personne{parseInt(numberOfPeople) > 1 ? 's' : ''}</span> • 
+              <span class="font-medium" id="vrTypeDisplay">{vrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard'}</span> • 
+              <span class="font-medium" id="durationDisplay">{duration} minutes</span> • 
+              <span class="font-medium" id="dateTimeDisplay">{formattedDate ? `${formattedDate} à ${formattedTime}` : 'Chargement de la date...'}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="fullName" class="block text-sm font-medium text-gray-700 mb-1">
+            Nom et prénom *
+          </label>
+          <input
+            type="text"
+            id="fullName"
+            name="fullName"
+            required
+            class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base"
+            placeholder="Votre nom complet"
+            autocomplete="name"
+          />
+        </div>
+        
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+            Email *
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base"
+            placeholder="votre@email.com"
+            autocomplete="email"
+          />
+        </div>
+        
+        <div>
+          <label for="phoneNumber" class="block text-sm font-medium text-gray-700 mb-1">
+            Numéro de téléphone *
+          </label>
+          <input
+            type="tel"
+            id="phoneNumber"
+            name="phoneNumber"
+            required
+            pattern="[0-9]{10}"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base"
+            placeholder="0612345678"
+            autocomplete="tel"
+            inputmode="numeric"
+          />
+          <p class="mt-1 text-xs text-gray-500">Format: 10 chiffres sans espaces</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
+      <a 
+        href={`/reservation/time?numberOfPeople=${numberOfPeople}&vrType=${vrType}&duration=${duration}`} 
+        class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+      >
+        ← Retour
+      </a>
+      <button
+        type="submit"
+        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+      >
+        Continuer →
+      </button>
+    </div>
+  </form>
+</ReservationLayout>
+
+<script>
+  // Handle form data persistence
+  document.addEventListener('DOMContentLoaded', () => {
+    // Retrieve data from URL or sessionStorage
+    const params = new URLSearchParams(window.location.search);
+    const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
+    let vrType = params.get('vrType') || sessionStorage.getItem('reservation_vrType');
+    const selectedDateTime = params.get('selectedDateTime') || sessionStorage.getItem('reservation_selectedDateTime');
+    
+    // Force VR standard pour les groupes de plus de 4 personnes (côté client)
+    const numPeople = parseInt(numberOfPeople || '0');
+    if (numPeople > 4 && vrType === 'VR_WIRELESS') {
+      console.log('Contact page - correction client: forcage de VR standard pour groupe de', numPeople, 'personnes');
+      vrType = 'VR';
+      sessionStorage.setItem('reservation_vrType', 'VR');
+    }
+    
+    console.log('Contact page: données récupérées', { 
+      fromURL: { 
+        numberOfPeople: params.get('numberOfPeople'), 
+        vrType: params.get('vrType'), 
+        selectedDateTime: params.get('selectedDateTime') 
+      },
+      fromSession: {
+        numberOfPeople: sessionStorage.getItem('reservation_numberOfPeople'),
+        vrType: sessionStorage.getItem('reservation_vrType'),
+        selectedDateTime: sessionStorage.getItem('reservation_selectedDateTime')
+      },
+      final: { numberOfPeople, vrType, selectedDateTime }
+    });
+    
+    // Update hidden inputs if we have the data
+    if (numberOfPeople) {
+      // Update hidden input if value comes from sessionStorage
+      if (!params.get('numberOfPeople')) {
+        const hiddenInput = document.querySelector('input[name="numberOfPeople"]');
+        if (hiddenInput instanceof HTMLInputElement) {
+          hiddenInput.value = numberOfPeople;
+        }
+      }
+      
+      // Always update display regardless of data source
+      const displayElement = document.getElementById('numPeopleDisplay');
+      if (displayElement) {
+        const pluralSuffix = parseInt(numberOfPeople) > 1 ? 's' : '';
+        displayElement.textContent = `${numberOfPeople} personne${pluralSuffix}`;
+        console.log('Updated numPeopleDisplay:', displayElement.textContent);
+      } else {
+        console.error('numPeopleDisplay element not found');
+      }
+    }
+    
+    if (vrType) {
+      // Update hidden input if value comes from sessionStorage
+      if (!params.get('vrType')) {
+        const hiddenInput = document.querySelector('input[name="vrType"]');
+        if (hiddenInput instanceof HTMLInputElement) {
+          hiddenInput.value = vrType;
+        }
+      }
+      
+      // Always update display regardless of data source
+      const displayElement = document.getElementById('vrTypeDisplay');
+      if (displayElement) {
+        // Forcer VR standard pour les groupes de plus de 4 personnes
+        const numPeople = parseInt(numberOfPeople || '0');
+        const correctedVrType = (numPeople > 4 && vrType === 'VR_WIRELESS') ? 'VR' : vrType;
+        
+        if (numPeople > 4 && vrType === 'VR_WIRELESS') {
+          console.log('Correction du type VR pour un groupe de plus de 4 personnes');
+          // Mettre à jour le hidden input aussi
+          const hiddenInput = document.querySelector('input[name="vrType"]');
+          if (hiddenInput instanceof HTMLInputElement) {
+            hiddenInput.value = 'VR';
+          }
+          // Mettre à jour sessionStorage
+          sessionStorage.setItem('reservation_vrType', 'VR');
+        }
+        
+        displayElement.textContent = correctedVrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard';
+        console.log('Updated vrTypeDisplay:', displayElement.textContent);
+      } else {
+        console.error('vrTypeDisplay element not found');
+      }
+    }
+    
+    // Mettre à jour l'input caché et l'affichage pour selectedDateTime
+    const selectedDateTimeValue = selectedDateTime || sessionStorage.getItem('reservation_selectedDateTime');
+    
+    if (selectedDateTimeValue) {
+      // Mettre à jour l'input caché
+      const hiddenInput = document.querySelector('input[name="selectedDateTime"]');
+      if (hiddenInput instanceof HTMLInputElement) {
+        hiddenInput.value = selectedDateTimeValue;
+      }
+      
+      // Mettre à jour l'affichage avec le formatage côté client
+      const dateTimeDisplay = document.getElementById('dateTimeDisplay');
+      if (dateTimeDisplay) {
+        try {
+          console.log('Formatting date client-side:', selectedDateTimeValue);
+          const [datePart, timePart] = selectedDateTimeValue.split('T');
+          const date = new Date(datePart);
+          
+          const formattedDate = date.toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            day: 'numeric', 
+            month: 'long',
+            year: 'numeric'
+          });
+          
+          console.log('Client-side formatted date:', formattedDate, 'time:', timePart);
+          dateTimeDisplay.textContent = `${formattedDate} à ${timePart}`;
+          
+          // Si la date vient du stockage de session, rafraîchir la page pour inclure la date dans l'URL
+          if (!params.get('selectedDateTime') && !window.location.search.includes('refreshed=true')) {
+            console.log('Refreshing page to include selectedDateTime in URL');
+            const currentParams = new URLSearchParams(window.location.search);
+            currentParams.set('selectedDateTime', selectedDateTimeValue);
+            currentParams.set('refreshed', 'true');
+            
+            // Ajout d'un petit délai pour s'assurer que l'utilisateur voit d'abord la date s'afficher
+            setTimeout(() => {
+              window.location.search = currentParams.toString();
+            }, 100);
+          }
+        } catch (error) {
+          console.error('Error formatting date client-side:', error);
+          dateTimeDisplay.textContent = 'Date non disponible';
+        }
+      } else {
+        console.error('dateTimeDisplay element not found');
+      }
+    } else {
+      console.error('Aucune date trouvée, ni dans l\'URL ni dans sessionStorage');
+      // Rediriger vers la page de sélection de date?
+      if (confirm('Aucune date sélectionnée. Voulez-vous retourner à la page de sélection de date?')) {
+        const redirectUrl = `/reservation/date?numberOfPeople=${numberOfPeople || ''}&vrType=${vrType || ''}`;
+        window.location.href = redirectUrl;
+      }
+    }
+    
+    // Store form values in sessionStorage
+    const formElements = document.querySelectorAll('input[name="fullName"], input[name="email"], input[name="phoneNumber"]');
+    formElements.forEach(input => {
+      if (input instanceof HTMLInputElement) {
+        // Load saved value if exists
+        const savedValue = sessionStorage.getItem(`reservation_${input.name}`);
+        if (savedValue) {
+          input.value = savedValue;
+        }
+        
+        // Save on input change
+        input.addEventListener('input', () => {
+          sessionStorage.setItem(`reservation_${input.name}`, input.value);
+        });
+      }
+    });
+    
+    // Ajouter un gestionnaire pour le submit du formulaire
+    const contactForm = document.getElementById('contactForm');
+    if (contactForm instanceof HTMLFormElement) {
+      contactForm.addEventListener('submit', (e) => {
+        e.preventDefault(); // Empêche la soumission normale
+        
+        // Sauvegarder toutes les valeurs des champs dans sessionStorage
+        const formInputs = contactForm.querySelectorAll('input[name="fullName"], input[name="email"], input[name="phoneNumber"]');
+        let allFieldsFilled = true;
+        
+        formInputs.forEach(input => {
+          if (input instanceof HTMLInputElement) {
+            if (!input.value.trim()) {
+              allFieldsFilled = false;
+              input.classList.add('border-red-500');
+              return;
+            }
+            
+            console.log(`Sauvegarde de ${input.name} = ${input.value} dans sessionStorage`);
+            sessionStorage.setItem(`reservation_${input.name}`, input.value);
+          }
+        });
+        
+        if (!allFieldsFilled) {
+          alert('Veuillez remplir tous les champs obligatoires');
+          return;
+        }
+        
+        // Construire l'URL manuellement avec tous les paramètres
+        const params = new URLSearchParams();
+        
+        // Ajouter les valeurs des étapes précédentes
+        const prevParams = ['numberOfPeople', 'vrType', 'selectedDateTime'];
+        prevParams.forEach(param => {
+          const hiddenInput = contactForm.querySelector(`input[name="${param}"]`);
+          if (hiddenInput instanceof HTMLInputElement && hiddenInput.value) {
+            params.append(param, hiddenInput.value);
+          } else {
+            const storedValue = sessionStorage.getItem(`reservation_${param}`);
+            if (storedValue) {
+              params.append(param, storedValue);
+            }
+          }
+        });
+        
+        // Ajouter les valeurs du formulaire courant
+        formInputs.forEach(input => {
+          if (input instanceof HTMLInputElement) {
+            params.append(input.name, input.value);
+          }
+        });
+        
+        // Afficher les paramètres finaux pour debug
+        console.log('Paramètres d\'URL finaux:', params.toString());
+        
+        // Rediriger vers la page summary avec tous les paramètres
+        window.location.href = `/reservation/summary?${params.toString()}`;
+      });
+    }
+  });
+</script>

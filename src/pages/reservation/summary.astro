@@ -1,0 +1,452 @@
+---
+import ReservationLayout from '../../layouts/ReservationLayout.astro';
+
+// Get query parameters from all previous steps
+const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
+const vrType = Astro.url.searchParams.get('vrType');
+const duration = Astro.url.searchParams.get('duration');
+const selectedDateTime = Astro.url.searchParams.get('selectedDateTime');
+const fullName = Astro.url.searchParams.get('fullName');
+const email = Astro.url.searchParams.get('email');
+const phoneNumber = Astro.url.searchParams.get('phoneNumber');
+
+// Format datetime for display
+let formattedDate = '';
+let formattedTime = '';
+
+console.log('Raw selectedDateTime from URL in summary:', selectedDateTime);
+
+if (selectedDateTime) {
+  try {
+    const [datePart, timePart] = selectedDateTime.split('T');
+    const date = new Date(datePart);
+    
+    formattedDate = date.toLocaleDateString('fr-FR', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long',
+      year: 'numeric'
+    });
+    
+    formattedTime = timePart;
+    
+    console.log('Formatted date and time in summary:', { selectedDateTime, formattedDate, formattedTime });
+  } catch (error) {
+    console.error('Error formatting date in summary:', error);
+  }
+} else {
+  console.log('No selectedDateTime available in summary, will check sessionStorage client-side');
+}
+
+// Force VR standard pour les groupes de plus de 4 personnes
+const parsedNumberOfPeople = parseInt(numberOfPeople || '0');
+let correctedVrType = vrType;
+if (parsedNumberOfPeople > 4 && vrType === 'VR_WIRELESS') {
+  console.log('Correction serveur: forcage de VR standard pour groupe de', parsedNumberOfPeople, 'personnes');
+  correctedVrType = 'VR';
+}
+
+// Calculate estimated price
+// Prix par personne en fonction du nombre de personnes
+let pricePerPerson;
+if (parsedNumberOfPeople <= 2) {
+  // Pour 1 ou 2 personnes
+  pricePerPerson = 29;
+} else if (parsedNumberOfPeople <= 4) {
+  // Pour 3 ou 4 personnes
+  pricePerPerson = 27;
+} else {
+  // Pour 5 ou 6 personnes
+  pricePerPerson = 25;
+}
+
+const totalPrice = pricePerPerson * parsedNumberOfPeople;
+---
+
+<ReservationLayout title="Réservation - Résumé" currentStep={7}>
+  <form method="get" action="/reservation/confirmation" class="space-y-6" id="summaryForm">
+    <!-- Pass along all previous data -->
+    <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
+    <input type="hidden" name="vrType" value={correctedVrType} />
+    <input type="hidden" name="duration" value={duration} />
+    <input type="hidden" name="selectedDateTime" value={selectedDateTime} />
+    <input type="hidden" name="fullName" value={fullName} />
+    <input type="hidden" name="email" value={email} />
+    <input type="hidden" name="phoneNumber" value={phoneNumber} />
+    
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Résumé de votre réservation</h2>
+      <p class="text-gray-600 mb-6">Veuillez vérifier les détails de votre réservation avant de confirmer</p>
+      
+      <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <h3 class="text-lg font-medium">Détails de la réservation</h3>
+        </div>
+        
+        <div class="p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+            <dt class="text-gray-600 mb-1 sm:mb-0">Nombre de personnes</dt>
+            <dd class="font-medium text-gray-900" id="numberOfPeopleDisplay">{numberOfPeople ? `${numberOfPeople} personne${parseInt(numberOfPeople) > 1 ? 's' : ''}` : 'Chargement...'}</dd>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+            <dt class="text-gray-600 mb-1 sm:mb-0">Type de VR</dt>
+            <dd class="font-medium text-gray-900" id="vrTypeDisplay">{correctedVrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard'}</dd>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+            <dt class="text-gray-600 mb-1 sm:mb-0">Durée</dt>
+            <dd class="font-medium text-gray-900" id="durationDisplay">{duration} minutes</dd>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+            <dt class="text-gray-600 mb-1 sm:mb-0">Date et heure</dt>
+            <dd class="font-medium text-gray-900" id="dateTimeDisplay">{formattedDate ? `${formattedDate} à ${formattedTime}` : 'Chargement de la date...'}</dd>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+            <dt class="text-gray-600 mb-1 sm:mb-0">Nom</dt>
+            <dd class="font-medium text-gray-900" id="fullNameDisplay">{fullName || 'Chargement...'}</dd>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+            <dt class="text-gray-600 mb-1 sm:mb-0">Email</dt>
+            <dd class="font-medium text-gray-900 break-all" id="emailDisplay">{email || 'Chargement...'}</dd>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
+            <dt class="text-gray-600 mb-1 sm:mb-0">Téléphone</dt>
+            <dd class="font-medium text-gray-900" id="phoneNumberDisplay">{phoneNumber || 'Chargement...'}</dd>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row justify-between py-2 mt-4 pt-4 border-t border-gray-200">
+            <dt class="text-lg font-semibold text-gray-900 mb-1 sm:mb-0">Prix total estimé</dt>
+            <dd class="text-lg font-semibold text-gray-900" id="totalPriceDisplay">{totalPrice} €</dd>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6 bg-amber-50 border-l-4 border-amber-500 p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-amber-700">
+              En confirmant cette réservation, vous acceptez les conditions générales d'utilisation et la politique d'annulation.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
+      <a 
+        href={`/reservation/contact?numberOfPeople=${numberOfPeople}&vrType=${vrType}&selectedDateTime=${selectedDateTime}`} 
+        class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+      >
+        ← Retour
+      </a>
+      <button
+        type="submit"
+        class="py-2.5 px-5 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+      >
+        Confirmer la réservation
+      </button>
+    </div>
+  </form>
+</ReservationLayout>
+
+<script>
+  // Pass along all data from session storage if needed
+  document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    
+    // Débugger les valeurs disponibles
+    console.log('DEBUG - Paramètres URL:', {
+      numberOfPeople: params.get('numberOfPeople'),
+      vrType: params.get('vrType'),
+      selectedDateTime: params.get('selectedDateTime'),
+      fullName: params.get('fullName'),
+      email: params.get('email'),
+      phoneNumber: params.get('phoneNumber')
+    });
+    
+    console.log('DEBUG - Session Storage:', {
+      numberOfPeople: sessionStorage.getItem('reservation_numberOfPeople'),
+      vrType: sessionStorage.getItem('reservation_vrType'),
+      selectedDateTime: sessionStorage.getItem('reservation_selectedDateTime'),
+      fullName: sessionStorage.getItem('reservation_fullName'),
+      email: sessionStorage.getItem('reservation_email'),
+      phoneNumber: sessionStorage.getItem('reservation_phoneNumber')
+    });
+    
+    // Les champs à traiter
+    const fields = [
+      'numberOfPeople', 
+      'vrType', 
+      'fullName', 
+      'email', 
+      'phoneNumber'
+    ];
+    
+    fields.forEach(field => {
+      // Check if field is missing from URL but exists in session storage
+      const paramValue = params.get(field);
+      const storedValue = sessionStorage.getItem(`reservation_${field}`);
+      
+      // Mettre à jour la valeur dans le hidden input
+      if (!paramValue && storedValue) {
+        const hiddenInput = document.querySelector(`input[name="${field}"]`);
+        if (hiddenInput instanceof HTMLInputElement) {
+          hiddenInput.value = storedValue;
+        }
+      }
+      
+      // Mettre à jour l'affichage également
+      const displayElement = document.getElementById(`${field}Display`);
+      if (displayElement) {
+        const valueToDisplay = paramValue || storedValue;
+        if (field === 'numberOfPeople' && valueToDisplay) {
+          const pluralSuffix = parseInt(valueToDisplay) > 1 ? 's' : '';
+          displayElement.textContent = `${valueToDisplay} personne${pluralSuffix}`;
+        } else if (field === 'vrType' && valueToDisplay) {
+          const numPeople = parseInt(params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople') || '0');
+          const finalVrType = (numPeople > 4 && valueToDisplay === 'VR_WIRELESS') ? 'VR' : valueToDisplay;
+          displayElement.textContent = finalVrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard';
+        } else if (valueToDisplay) {
+          displayElement.textContent = valueToDisplay;
+        }
+      }
+    });
+    
+    // Special handling for selectedDateTime which might be stored with different keys
+    const selectedDateTimeParam = params.get('selectedDateTime');
+    const storedDateTime = sessionStorage.getItem('reservation_selectedDateTime');
+    
+    // Correction du type de VR pour les groupes de plus de 4 personnes
+    const numPeople = parseInt(params.get('numberOfPeople') || '0');
+    let vrTypeValue = params.get('vrType') || '';
+    
+    if (numPeople > 4 && vrTypeValue === 'VR_WIRELESS') {
+      console.log('Correction du type VR pour un groupe de plus de 4 personnes sur la page résumé');
+      vrTypeValue = 'VR'; // Force VR standard
+      
+      // Mettre à jour les inputs cachés
+      const hiddenInput = document.querySelector('input[name="vrType"]');
+      if (hiddenInput instanceof HTMLInputElement) {
+        hiddenInput.value = 'VR';
+      }
+      
+      // Mettre à jour sessionStorage
+      sessionStorage.setItem('reservation_vrType', 'VR');
+      
+      // Mettre à jour l'affichage
+      const vrTypeDisplay = document.getElementById('vrTypeDisplay');
+      if (vrTypeDisplay) {
+        vrTypeDisplay.textContent = 'VR Standard';
+      }
+    }
+    
+    console.log('Summary page: données récupérées', { 
+      fromURL: { 
+        numberOfPeople: params.get('numberOfPeople'),
+        vrType: params.get('vrType'),
+        correctedVrType: vrTypeValue,
+        selectedDateTime: selectedDateTimeParam,
+        fullName: params.get('fullName'),
+        email: params.get('email'),
+        phoneNumber: params.get('phoneNumber')
+      },
+      fromSession: {
+        selectedDateTime: sessionStorage.getItem('reservation_selectedDateTime')
+      },
+      final: { 
+        selectedDateTime: selectedDateTimeParam || storedDateTime,
+        vrType: vrTypeValue,
+        numberOfPeople: params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople'),
+        fullName: params.get('fullName') || sessionStorage.getItem('reservation_fullName'),
+        email: params.get('email') || sessionStorage.getItem('reservation_email'),
+        phoneNumber: params.get('phoneNumber') || sessionStorage.getItem('reservation_phoneNumber')
+      }
+    });
+    
+    // Function to format and display the date
+    const formatAndDisplayDateTime = (dateTimeValue) => {
+      if (!dateTimeValue) return;
+      
+      const dateTimeDisplay = document.getElementById('dateTimeDisplay');
+      if (!dateTimeDisplay) return;
+      
+      try {
+        console.log('Formatting date client-side in summary:', dateTimeValue);
+        const [datePart, timePart] = dateTimeValue.split('T');
+        const date = new Date(datePart);
+        
+        const formattedDate = date.toLocaleDateString('fr-FR', { 
+          weekday: 'long', 
+          day: 'numeric', 
+          month: 'long',
+          year: 'numeric'
+        });
+        
+        console.log('Client-side formatted date in summary:', formattedDate, 'time:', timePart);
+        dateTimeDisplay.textContent = `${formattedDate} à ${timePart}`;
+      } catch (error) {
+        console.error('Error formatting date client-side in summary:', error);
+        console.error('Date value that caused error:', dateTimeValue);
+        dateTimeDisplay.textContent = 'Date non disponible';
+      }
+    };
+    
+    // Obtenir la date, soit de l'URL, soit du storage
+    const selectedDateTimeValue = selectedDateTimeParam || storedDateTime;
+    
+    if (selectedDateTimeValue) {
+      // Mettre à jour l'input caché
+      const hiddenInput = document.querySelector('input[name="selectedDateTime"]');
+      if (hiddenInput instanceof HTMLInputElement) {
+        hiddenInput.value = selectedDateTimeValue;
+      }
+      
+      // Formater et afficher la date
+      formatAndDisplayDateTime(selectedDateTimeValue);
+      
+      // Si la date vient du storage et pas de l'URL, rafraîchir la page
+      if (!selectedDateTimeParam && !window.location.search.includes('refreshed=true')) {
+        console.log('Refreshing summary page to include selectedDateTime in URL');
+        const currentParams = new URLSearchParams(window.location.search);
+        currentParams.set('selectedDateTime', selectedDateTimeValue);
+        currentParams.set('refreshed', 'true');
+        
+        // Petit délai pour que l'utilisateur voie d'abord la date
+        setTimeout(() => {
+          window.location.search = currentParams.toString();
+        }, 100);
+      }
+    } else {
+      console.error('Aucune date trouvée, ni dans l\'URL ni dans sessionStorage sur la page summary');
+      // Afficher un message d'erreur dans l'interface utilisateur
+      const dateTimeDisplay = document.getElementById('dateTimeDisplay');
+      if (dateTimeDisplay) {
+        dateTimeDisplay.textContent = 'Date non disponible';
+        dateTimeDisplay.classList.add('text-red-600');
+      }
+      
+      // Proposer de revenir à la page de sélection de date
+      if (confirm('Aucune date sélectionnée. Voulez-vous retourner à la page de sélection de date?')) {
+        const numberOfPeople = params.get('numberOfPeople') || '';
+        const vrType = params.get('vrType') || '';
+        window.location.href = `/reservation/date?numberOfPeople=${numberOfPeople}&vrType=${vrType}`;
+      }
+    }
+    
+    // Calculer et mettre à jour le prix total
+    const updateTotalPrice = () => {
+      // Récupérer les valeurs actualisées
+      const numPeople = parseInt(params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople') || '0');
+      const finalVrType = vrTypeValue;
+      
+      // Log pour debug
+      console.log('Calcul du prix total:', { 
+        numPeople, 
+        finalVrType,
+        fromURL: params.get('numberOfPeople'),
+        fromSession: sessionStorage.getItem('reservation_numberOfPeople')
+      });
+      
+      // Calculer le prix en fonction du nombre de personnes
+      let pricePerPerson;
+      if (numPeople <= 2) {
+        // Pour 1 ou 2 personnes
+        pricePerPerson = 29;
+      } else if (numPeople <= 4) {
+        // Pour 3 ou 4 personnes
+        pricePerPerson = 27;
+      } else {
+        // Pour 5 ou 6 personnes
+        pricePerPerson = 25;
+      }
+      
+      const totalPrice = pricePerPerson * numPeople;
+      
+      // Mettre à jour l'affichage
+      const totalPriceDisplay = document.getElementById('totalPriceDisplay');
+      if (totalPriceDisplay) {
+        totalPriceDisplay.textContent = `${totalPrice} €`;
+      }
+      
+      // Mettre à jour également l'affichage du nombre de personnes
+      const peopleDisplay = document.getElementById('numberOfPeopleDisplay');
+      if (peopleDisplay) {
+        peopleDisplay.textContent = numPeople > 0 
+          ? `${numPeople} personne${numPeople > 1 ? 's' : ''}`
+          : 'Information manquante';
+      }
+    };
+    
+    // Exécuter le calcul du prix total
+    updateTotalPrice();
+    
+    // Ajouter un gestionnaire pour la soumission du formulaire
+    const summaryForm = document.getElementById('summaryForm');
+    if (summaryForm instanceof HTMLFormElement) {
+      summaryForm.addEventListener('submit', (e) => {
+        e.preventDefault(); // On empêche la soumission normale
+        
+        // S'assurer que toutes les données sont disponibles
+        const allFields = ['numberOfPeople', 'vrType', 'selectedDateTime', 'fullName', 'email', 'phoneNumber'];
+        const missingFields = [];
+        
+        // Vérifier chaque champ
+        allFields.forEach(field => {
+          const hiddenInput = summaryForm.querySelector(`input[name="${field}"]`);
+          
+          if (hiddenInput instanceof HTMLInputElement) {
+            // Si la valeur est vide dans l'input, essayer de la récupérer depuis sessionStorage
+            if (!hiddenInput.value) {
+              const storedValue = sessionStorage.getItem(`reservation_${field}`);
+              if (storedValue) {
+                console.log(`Correction de la valeur de ${field} avec sessionStorage:`, storedValue);
+                hiddenInput.value = storedValue;
+              } else {
+                console.log(`Valeur manquante pour ${field}`);
+                missingFields.push(field);
+              }
+            }
+          }
+        });
+        
+        // Déboguer les valeurs finales avant soumission
+        console.log('Valeurs finales du formulaire avant soumission:', {
+          numberOfPeople: summaryForm.querySelector('input[name="numberOfPeople"]')?.value,
+          vrType: summaryForm.querySelector('input[name="vrType"]')?.value,
+          selectedDateTime: summaryForm.querySelector('input[name="selectedDateTime"]')?.value,
+          fullName: summaryForm.querySelector('input[name="fullName"]')?.value,
+          email: summaryForm.querySelector('input[name="email"]')?.value,
+          phoneNumber: summaryForm.querySelector('input[name="phoneNumber"]')?.value
+        });
+        
+        // Construire l'URL manuellement
+        const params = new URLSearchParams();
+        allFields.forEach(field => {
+          const input = summaryForm.querySelector(`input[name="${field}"]`);
+          if (input instanceof HTMLInputElement && input.value) {
+            params.append(field, input.value);
+          } else {
+            // Si aucune valeur n'est trouvée, utiliser celle de sessionStorage
+            const storedValue = sessionStorage.getItem(`reservation_${field}`);
+            if (storedValue) {
+              params.append(field, storedValue);
+            }
+          }
+        });
+        
+        // Rediriger vers la page de confirmation avec tous les paramètres
+        window.location.href = `/reservation/confirmation?${params.toString()}`;
+      });
+    }
+  });
+</script>

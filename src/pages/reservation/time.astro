@@ -1,0 +1,213 @@
+---
+import ReservationLayout from '../../layouts/ReservationLayout.astro';
+
+// Récupérer les paramètres
+const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
+const vrType = Astro.url.searchParams.get('vrType');
+const duration = Astro.url.searchParams.get('duration');
+const selectedDate = Astro.url.searchParams.get('selectedDate');
+
+// Formatage de la date pour l'affichage
+let formattedDate = '';
+if (selectedDate) {
+  try {
+    const date = new Date(selectedDate);
+    formattedDate = date.toLocaleDateString('fr-FR', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch (error) {
+    console.error('Erreur lors du formatage de la date:', error);
+  }
+}
+
+// Simuler les créneaux disponibles en fonction de la durée choisie
+const timeSlots = [];
+const durationInMin = parseInt(duration || '30');
+
+// Heures d'ouverture: 10h-19h
+// Si durée = 30min, proposer des créneaux toutes les 30min
+// Si durée = 60min, proposer des créneaux toutes les heures
+const startHour = 10;
+const endHour = 19;
+const interval = durationInMin;
+
+// Générer des créneaux en fonction de la durée
+for (let hour = startHour; hour < endHour; hour++) {
+  // Pour la durée de 30min, on ajoute 2 créneaux par heure
+  if (interval === 30) {
+    timeSlots.push({
+      value: `${hour}:00`,
+      label: `${hour}:00`
+    });
+    timeSlots.push({
+      value: `${hour}:30`,
+      label: `${hour}:30`
+    });
+  } 
+  // Pour la durée de 60min, on ajoute 1 créneau par heure
+  else if (interval === 60) {
+    timeSlots.push({
+      value: `${hour}:00`,
+      label: `${hour}:00`
+    });
+  }
+}
+
+// Simuler la non-disponibilité de certains créneaux
+// Dans une vraie application, ces données viendraient de la base de données
+const unavailableTimesSet = new Set([
+  '11:00',
+  '14:30',
+  '16:00',
+  '17:30'
+]);
+
+// Filtrer les créneaux disponibles
+const availableTimeSlots = timeSlots.filter(slot => !unavailableTimesSet.has(slot.value));
+---
+
+<ReservationLayout title="Réservation - Horaires" currentStep={5}>
+  <form method="get" action="/reservation/contact" class="space-y-6" id="timeForm">
+    <!-- Transmettre les données des étapes précédentes -->
+    <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
+    <input type="hidden" name="vrType" value={vrType} />
+    <input type="hidden" name="duration" value={duration} />
+    <input type="hidden" name="selectedDate" value={selectedDate} />
+    
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Choisissez un horaire</h2>
+      <p class="text-gray-600 mb-2">Pour {formattedDate}</p>
+      <p class="text-gray-600 mb-6">Durée: {duration} minutes</p>
+      
+      {availableTimeSlots.length > 0 ? (
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {availableTimeSlots.map((timeSlot) => (
+            <label class="relative block">
+              <input 
+                type="radio" 
+                name="selectedTime" 
+                value={timeSlot.value} 
+                class="peer sr-only" 
+                required
+              />
+              <div class="h-16 flex items-center justify-center rounded-lg border-2 border-gray-300 bg-white text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+                <span class="text-lg font-medium">{timeSlot.label}</span>
+              </div>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div class="bg-amber-50 border-l-4 border-amber-500 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-amber-700">
+                Aucun créneau disponible pour cette date. Veuillez sélectionner une autre date.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+    
+    <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
+      <a 
+        href={`/reservation/date?numberOfPeople=${numberOfPeople}&vrType=${vrType}&duration=${duration}`} 
+        class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+      >
+        ← Retour
+      </a>
+      <button
+        type="submit"
+        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+        id="continueButton"
+      >
+        Continuer →
+      </button>
+    </div>
+  </form>
+</ReservationLayout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Sélectionner le formulaire
+    const timeForm = document.getElementById('timeForm');
+    
+    // Récupérer les boutons radio
+    const radioButtons = document.querySelectorAll('input[name="selectedTime"]');
+    
+    // Vérifier si le bouton Continuer doit être activé
+    const continueButton = document.getElementById('continueButton');
+    if (radioButtons.length === 0 && continueButton) {
+      continueButton.disabled = true;
+      continueButton.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    
+    // Ajouter un gestionnaire d'événement change à chaque bouton radio
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (radio instanceof HTMLInputElement && radio.checked) {
+          // Stocker la valeur dans sessionStorage
+          sessionStorage.setItem('reservation_selectedTime', radio.value);
+          console.log('Horaire sélectionné:', radio.value);
+        }
+      });
+    });
+    
+    // Vérifier s'il y a une valeur sauvegardée
+    const savedValue = sessionStorage.getItem('reservation_selectedTime');
+    if (savedValue) {
+      // Sélectionner le bouton radio correspondant
+      const radioToSelect = document.querySelector(`input[name="selectedTime"][value="${savedValue}"]`);
+      if (radioToSelect instanceof HTMLInputElement) {
+        radioToSelect.checked = true;
+      }
+    }
+    
+    // Récupérer la date sélectionnée
+    const selectedDate = new URLSearchParams(window.location.search).get('selectedDate') 
+      || sessionStorage.getItem('reservation_selectedDate');
+    
+    // Récupérer la durée sélectionnée
+    const duration = new URLSearchParams(window.location.search).get('duration') 
+      || sessionStorage.getItem('reservation_duration');
+    
+    console.log('Date sélectionnée:', selectedDate, 'Durée:', duration, 'Heure sauvegardée:', savedValue);
+    
+    // Ajouter un gestionnaire d'événement pour la soumission du formulaire
+    if (timeForm instanceof HTMLFormElement) {
+      timeForm.addEventListener('submit', (e) => {
+        // Récupérer la valeur sélectionnée
+        const selectedRadio = document.querySelector('input[name="selectedTime"]:checked');
+        if (selectedRadio instanceof HTMLInputElement) {
+          const selectedTime = selectedRadio.value;
+          
+          // Stocker la valeur dans sessionStorage
+          sessionStorage.setItem('reservation_selectedTime', selectedTime);
+          
+          // Créer un datetime combiné pour la page suivante
+          if (selectedDate) {
+            const selectedDateTime = `${selectedDate}T${selectedTime}`;
+            sessionStorage.setItem('reservation_selectedDateTime', selectedDateTime);
+            
+            // Ajouter le selectedDateTime comme paramètre d'URL
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'selectedDateTime';
+            hiddenInput.value = selectedDateTime;
+            timeForm.appendChild(hiddenInput);
+            
+            console.log('Formulaire soumis avec datetime:', selectedDateTime);
+          }
+        }
+      });
+    }
+  });
+</script>

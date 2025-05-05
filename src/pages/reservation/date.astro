@@ -1,0 +1,208 @@
+---
+import ReservationLayout from '../../layouts/ReservationLayout.astro';
+import { getLocalTimeZone, today } from '@internationalized/date';
+
+// Get query parameters from previous steps
+const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
+const vrType = Astro.url.searchParams.get('vrType');
+const duration = Astro.url.searchParams.get('duration');
+
+// Generate available time slots (this would normally come from your database)
+const todayDate = today(getLocalTimeZone());
+const availableDates = [];
+
+// Generate next 14 days of available dates
+for (let i = 1; i <= 14; i++) {
+  const date = todayDate.add({ days: i });
+  const dateString = date.toString();
+  
+  // Generate 3 time slots per day
+  const timeSlots = [
+    { time: '10:00', available: Math.random() > 0.3 },
+    { time: '14:00', available: Math.random() > 0.3 },
+    { time: '18:00', available: Math.random() > 0.3 }
+  ];
+  
+  // Only add dates with at least one available time slot
+  if (timeSlots.some(slot => slot.available)) {
+    availableDates.push({
+      date: dateString,
+      dayName: new Date(dateString).toLocaleDateString('fr-FR', { weekday: 'long' }),
+      dayNumber: new Date(dateString).getDate(),
+      month: new Date(dateString).toLocaleDateString('fr-FR', { month: 'long' }),
+      timeSlots
+    });
+  }
+}
+
+// Group dates by month
+const datesByMonth = availableDates.reduce((acc, date) => {
+  const month = date.month;
+  if (!acc[month]) acc[month] = [];
+  acc[month].push(date);
+  return acc;
+}, {});
+---
+
+<ReservationLayout title="Réservation - Sélection de la date" currentStep={4}>
+  <form method="get" action="/reservation/time" class="space-y-6" id="dateForm">
+    <!-- Pass along the previous steps' data -->
+    <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
+    <input type="hidden" name="vrType" value={vrType} />
+    <input type="hidden" name="duration" value={duration} />
+    
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Choisissez une date</h2>
+      <p class="text-gray-600 mb-6">Sélectionnez la date de votre réservation</p>
+      
+      <div class="calendar-container space-y-8">
+        {Object.entries(datesByMonth).map(([month, dates]) => (
+          <div class="month-section">
+            <h3 class="text-lg font-medium text-gray-900 mb-3 capitalize">{month}</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              {dates.map(date => (
+                <label class="date-card border rounded-lg overflow-hidden cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="selectedDate" 
+                    value={date.date} 
+                    class="date-radio sr-only peer" 
+                    required
+                    data-date={date.date}
+                  />
+                  <div class="date-content peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700">
+                    <div class="date-header bg-gray-100 p-3 text-center peer-checked:bg-blue-100">
+                      <div class="text-xs text-gray-500 capitalize">{date.dayName}</div>
+                      <div class="text-lg font-bold">{date.dayNumber}</div>
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    
+    <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
+      <a 
+        href={`/reservation/duration?numberOfPeople=${numberOfPeople}&vrType=${vrType}`} 
+        class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+      >
+        ← Retour
+      </a>
+      <button
+        type="submit"
+        id="continueButton"
+        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors opacity-50 cursor-not-allowed"
+        disabled
+      >
+        Continuer →
+      </button>
+    </div>
+  </form>
+</ReservationLayout>
+
+<script>
+  // Enhance form interactions and handle selections
+  document.addEventListener('DOMContentLoaded', () => {
+    // Retrieve data from URL or sessionStorage
+    const params = new URLSearchParams(window.location.search);
+    const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
+    const vrType = params.get('vrType') || sessionStorage.getItem('reservation_vrType');
+    
+    // Update hidden inputs if we have the data in sessionStorage
+    if (numberOfPeople && !params.get('numberOfPeople')) {
+      const hiddenInput = document.querySelector('input[name="numberOfPeople"]');
+      if (hiddenInput instanceof HTMLInputElement) {
+        hiddenInput.value = numberOfPeople;
+      }
+    }
+    
+    if (vrType && !params.get('vrType')) {
+      const hiddenInput = document.querySelector('input[name="vrType"]');
+      if (hiddenInput instanceof HTMLInputElement) {
+        hiddenInput.value = vrType;
+      }
+    }
+    
+    // Handle date selection
+    const radioButtons = document.querySelectorAll('.date-radio');
+    const continueButton = document.getElementById('continueButton');
+    
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (radio instanceof HTMLInputElement && radio.checked) {
+          // Enable continue button
+          if (continueButton) {
+            continueButton.disabled = false;
+            continueButton.classList.remove('opacity-50', 'cursor-not-allowed');
+          }
+          
+          // Store selection in session storage for persistence
+          sessionStorage.setItem('reservation_selectedDate', radio.value);
+          
+          console.log('Date sélectionnée:', radio.value);
+        }
+      });
+    });
+    
+    // Pre-select date based on previous selection if navigating back
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDate = urlParams.get('selectedDate');
+    const savedDate = urlDate || sessionStorage.getItem('reservation_selectedDate');
+    
+    if (savedDate) {
+      console.log('Tentative de présélection de date:', savedDate);
+      const radioToSelect = document.querySelector(`.date-radio[value="${savedDate}"]`);
+      if (radioToSelect instanceof HTMLInputElement) {
+        radioToSelect.checked = true;
+        // Trigger change event to update button state
+        radioToSelect.dispatchEvent(new Event('change'));
+        console.log('Date présélectionnée avec succès:', savedDate);
+      } else {
+        console.log('Bouton radio correspondant non trouvé');
+      }
+    } else {
+      console.log('Aucune date sauvegardée trouvée');
+    }
+    
+    // Vérifier le formulaire avant soumission
+    const dateForm = document.getElementById('dateForm');
+    if (dateForm instanceof HTMLFormElement) {
+      dateForm.addEventListener('submit', (e) => {
+        e.preventDefault(); // Empêche la soumission normale du formulaire
+        
+        // Vérifions si une date est sélectionnée
+        const checkedRadio = document.querySelector('input[name="selectedDate"]:checked');
+        
+        console.log('Formulaire soumis, radio sélectionné:', checkedRadio);
+        
+        if (!checkedRadio) {
+          console.error('Aucune date sélectionnée lors de la soumission du formulaire');
+          alert('Veuillez sélectionner une date avant de continuer.');
+          return;
+        }
+        
+        console.log('Formulaire soumis avec date:', checkedRadio.value);
+        
+        // Assurons-nous que la valeur est bien dans session storage
+        sessionStorage.setItem('reservation_selectedDate', checkedRadio.value);
+        
+        // Créer l'URL manuellement avec tous les paramètres nécessaires
+        const numberOfPeopleParam = dateForm.querySelector('input[name="numberOfPeople"]')?.value || '';
+        const vrTypeParam = dateForm.querySelector('input[name="vrType"]')?.value || '';
+        const durationParam = dateForm.querySelector('input[name="duration"]')?.value || '';
+        const selectedDateParam = checkedRadio.value;
+        
+        // Construire l'URL avec les paramètres
+        const nextUrl = `/reservation/time?numberOfPeople=${encodeURIComponent(numberOfPeopleParam)}&vrType=${encodeURIComponent(vrTypeParam)}&duration=${encodeURIComponent(durationParam)}&selectedDate=${encodeURIComponent(selectedDateParam)}`;
+        
+        console.log('Redirection vers:', nextUrl);
+        
+        // Rediriger vers la page suivante
+        window.location.href = nextUrl;
+      });
+    }
+  });
+</script>

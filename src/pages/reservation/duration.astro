@@ -1,0 +1,97 @@
+---
+import ReservationLayout from '../../layouts/ReservationLayout.astro';
+
+// Get query parameters
+const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
+const vrType = Astro.url.searchParams.get('vrType');
+---
+
+<ReservationLayout title="Réservation - Durée" currentStep={3}>
+  <form method="get" action="/reservation/date" class="space-y-6" id="durationForm">
+    <!-- Pass along previous data -->
+    <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
+    <input type="hidden" name="vrType" value={vrType} />
+    
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">Quelle durée souhaitez-vous ?</h2>
+      <p class="text-gray-600 mb-6">Choisissez la durée de votre expérience VR</p>
+      
+      <div class="grid grid-cols-2 gap-4 max-w-md mx-auto">
+        {['30', '60'].map((minutes) => (
+          <label class="relative block">
+            <input 
+              type="radio" 
+              name="duration" 
+              value={minutes} 
+              class="peer sr-only" 
+              required
+              checked={minutes === '30'}
+            />
+            <div class="h-24 flex items-center justify-center rounded-lg border-2 border-gray-300 bg-white text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+              <span class="text-xl font-medium">{minutes} minutes</span>
+            </div>
+          </label>
+        ))}
+      </div>
+    </div>
+    
+    <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
+      <a 
+        href={`/reservation/vr-type?numberOfPeople=${numberOfPeople}`} 
+        class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+      >
+        ← Retour
+      </a>
+      <button
+        type="submit"
+        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+      >
+        Continuer →
+      </button>
+    </div>
+  </form>
+</ReservationLayout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Sélectionner le formulaire
+    const durationForm = document.getElementById('durationForm');
+    
+    // Récupérer les boutons radio
+    const radioButtons = document.querySelectorAll('input[name="duration"]');
+    
+    // Ajouter un gestionnaire d'événement change à chaque bouton radio
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (radio instanceof HTMLInputElement && radio.checked) {
+          // Stocker la valeur dans sessionStorage
+          sessionStorage.setItem('reservation_duration', radio.value);
+          console.log('Durée sauvegardée:', radio.value);
+        }
+      });
+    });
+    
+    // Vérifier s'il y a une valeur sauvegardée
+    const savedValue = sessionStorage.getItem('reservation_duration');
+    if (savedValue) {
+      // Sélectionner le bouton radio correspondant
+      const radioToSelect = document.querySelector(`input[name="duration"][value="${savedValue}"]`);
+      if (radioToSelect instanceof HTMLInputElement) {
+        radioToSelect.checked = true;
+      }
+    }
+    
+    // Ajouter un gestionnaire d'événement pour la soumission du formulaire
+    if (durationForm instanceof HTMLFormElement) {
+      durationForm.addEventListener('submit', (e) => {
+        // Récupérer la valeur sélectionnée
+        const selectedRadio = document.querySelector('input[name="duration"]:checked');
+        if (selectedRadio instanceof HTMLInputElement) {
+          // Stocker la valeur dans sessionStorage
+          sessionStorage.setItem('reservation_duration', selectedRadio.value);
+          console.log('Formulaire soumis avec durée:', selectedRadio.value);
+        }
+      });
+    }
+  });
+</script>
