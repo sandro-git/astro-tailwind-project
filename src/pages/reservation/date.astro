@@ -107,8 +107,6 @@ for (let monthOffset = 0; monthOffset < 6; monthOffset++) {
     const formattedDay = String(futureDate.getDate()).padStart(2, '0');
     const dateString = `${formattedYear}-${formattedMonth}-${formattedDay}`; // YYYY-MM-DD format
     
-    console.log(`Date générée: ${dateString} pour ${day}/${targetMonth+1}/${targetYear} (jour de semaine: ${futureDate.getDay()}, jour affiché: ${dayNames[futureDate.getDay() === 0 ? 6 : futureDate.getDay() - 1]})`); 
-    
     // Get the day of week (0 = Sunday, 1 = Monday, etc.)
     const dayOfWeek = futureDate.getDay();
     // Convert to our array index (our array starts with Monday at 0)
@@ -318,302 +316,187 @@ const capitalizeMonth = (month: string): string => {
 <script>
   // Add a pure JavaScript click handler that doesn't rely on Astro's hydration
   document.addEventListener('DOMContentLoaded', function() {
-    // Manually add click handlers in plain JS
-    // This should work immediately when the page loads
-    const initializeDropdown = function() {
-      const dropdownButton = document.getElementById('monthDropdownButton');
-      const dropdownPanel = document.getElementById('monthDropdownPanel');
-      
-      if (dropdownButton && dropdownPanel) {
-        console.log('Initial dropdown setup');
-        
-        // Toggle dropdown on button click
-        dropdownButton.onclick = function(e) {
-          e.preventDefault();
-          console.log('Dropdown button clicked');
-          
-          // Toggle visibility
-          if (dropdownPanel.style.display === 'block') {
-            dropdownPanel.style.display = 'none';
-          } else {
-            dropdownPanel.style.display = 'block';
-          }
-        };
-        
-        // Set up month buttons
-        const monthButtons = document.querySelectorAll('.month-button');
-        monthButtons.forEach(btn => {
-          if (btn instanceof HTMLElement) {
-            btn.onclick = function(e) {
-              e.stopPropagation();
-              if (this instanceof HTMLElement) {
-                const month = this.getAttribute('data-month');
-                console.log('Selected month:', month);
-                
-                // Update button text
-                const currentMonthDisplay = document.getElementById('currentMonthDisplay');
-                if (currentMonthDisplay && month) {
-                  currentMonthDisplay.textContent = month.charAt(0).toUpperCase() + month.slice(1);
-                }
-                
-                // Show the corresponding month section and hide others
-                const monthSections = document.querySelectorAll('.month-section');
-                monthSections.forEach(section => {
-                  if (section instanceof HTMLElement) {
-                    const sectionMonth = section.getAttribute('data-month');
-                    if (sectionMonth === month) {
-                      section.style.display = 'block';
-                    } else {
-                      section.style.display = 'none';
-                    }
-                  }
-                });
-                
-                // Hide dropdown
-                if (dropdownPanel instanceof HTMLElement) {
-                  dropdownPanel.style.display = 'none';
-                }
-              }
-            };
-          }
-        });
-        
-        // Close when clicking outside
-        document.body.addEventListener('click', function(e) {
-          const target = e.target;
-          if (target instanceof Node && dropdownButton instanceof HTMLElement && dropdownPanel instanceof HTMLElement &&
-              target !== dropdownButton && 
-              !dropdownButton.contains(target) && 
-              !dropdownPanel.contains(target) && 
-              dropdownPanel.style.display === 'block') {
-            dropdownPanel.style.display = 'none';
-          }
-        });
+    console.log('DOM loaded - initializing date selection page');
+    
+    // DOM elements
+    const dateForm = document.getElementById('dateForm');
+    const continueButton = document.getElementById('continueButton');
+    const dateCards = document.querySelectorAll('.date-card');
+    const dropdownButton = document.getElementById('monthDropdownButton');
+    const dropdownPanel = document.getElementById('monthDropdownPanel');
+    
+    // Helper function to enable continue button
+    const enableContinueButton = () => {
+      if (continueButton instanceof HTMLButtonElement) {
+        console.log('Enabling continue button');
+        continueButton.disabled = false;
+        continueButton.classList.remove('opacity-50', 'cursor-not-allowed');
       }
     };
     
-    // Check if a date is already selected to enable the button
-    const checkForPreselectedDate = function() {
-      console.log('Checking for preselected date...');
-      const preselectedRadio = document.querySelector('input[name="selectedDate"]:checked');
-      if (preselectedRadio) {
-        console.log('Found preselected date, enabling continue button');
-        const continueBtn = document.getElementById('continueButton');
-        if (continueBtn instanceof HTMLButtonElement) {
-          continueBtn.disabled = false;
-          continueBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-      } else {
-        console.log('No preselected date found');
-      }
-    };
-    
-    // Call immediately
-    initializeDropdown();
-    checkForPreselectedDate();
-    
-    // No need for direct click handler on the button as the form itself will handle submission
-    // We'll just keep the validation and storage on the form submit event
-    
-    // Also wait a bit to ensure everything is ready
-    setTimeout(() => {
-      console.log('Delayed initialization');
-      initializeDropdown();
-      checkForPreselectedDate();
-      
-      // Enhance form interactions and handle selections
-      console.log('Initializing date selector...');
-      
-      // Retrieve data from URL or sessionStorage
-      const params = new URLSearchParams(window.location.search);
-      const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
-      const vrType = params.get('vrType') || sessionStorage.getItem('reservation_vrType');
-    
-      // Update hidden inputs if we have the data in sessionStorage
-      if (numberOfPeople && !params.get('numberOfPeople')) {
-        const hiddenInput = document.querySelector('input[name="numberOfPeople"]');
-        if (hiddenInput instanceof HTMLInputElement) {
-          hiddenInput.value = numberOfPeople;
-        }
-      }
-      
-      if (vrType && !params.get('vrType')) {
-        const hiddenInput = document.querySelector('input[name="vrType"]');
-        if (hiddenInput instanceof HTMLInputElement) {
-          hiddenInput.value = vrType;
-        }
-      }
-      
-      // Handle date selection
-      const radioButtons = document.querySelectorAll('.date-radio');
-      const continueButton = document.getElementById('continueButton');
-      const dateCards = document.querySelectorAll('.date-card');
-      
-      // Make the labels/cards clickable and trigger the radio button inside
-      // Also directly enable the continue button
+    // Helper function to highlight selected card
+    const highlightSelectedCard = (selectedCard) => {
+      // Reset all cards
       dateCards.forEach(card => {
-        card.addEventListener('click', () => {
-          const radio = card.querySelector('.date-radio');
-          if (radio instanceof HTMLInputElement) {
-            // Set radio as checked
-            radio.checked = true;
-            
-            // Directly enable continue button without waiting for change event
-            if (continueButton instanceof HTMLButtonElement) {
-              console.log('Enabling continue button directly from card click');
-              continueButton.disabled = false;
-              continueButton.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-            
-            // Store in sessionStorage
-            sessionStorage.setItem('reservation_selectedDate', radio.value);
-            
-            // Reset all other cards
-            document.querySelectorAll('.date-card').forEach(otherCard => {
-              if (otherCard !== card) {
-                otherCard.classList.remove('ring-2', 'ring-blue-500');
-              }
-            });
-            
-            // Highlight this card
-            card.classList.add('ring-2', 'ring-blue-500');
-            
-            // Still dispatch change event for other listeners
-            radio.dispatchEvent(new Event('change'));
-            
-            console.log('Date card clicked:', radio.value);
-          }
-        });
+        card.classList.remove('ring-2', 'ring-blue-500');
       });
       
-      radioButtons.forEach(radio => {
-        radio.addEventListener('change', () => {
-          if (radio instanceof HTMLInputElement && radio.checked) {
-            // Enable continue button - ajout de logs pour débogage
-            console.log('Radio sélectionné, activation du bouton continue...');
-            if (continueButton) {
-              console.log('Bouton continue trouvé:', continueButton);
-              if (continueButton instanceof HTMLButtonElement) {
-                continueButton.disabled = false;
-                console.log('Disabled mis à false');
-              } else {
-                console.log('Le bouton n\'est pas un HTMLButtonElement');
+      // Highlight selected card
+      if (selectedCard) {
+        selectedCard.classList.add('ring-2', 'ring-blue-500');
+      }
+    };
+    
+    // Initialize dropdown
+    if (dropdownButton && dropdownPanel) {
+      console.log('Setting up month dropdown');
+      
+      // Toggle dropdown on button click
+      dropdownButton.onclick = function(e) {
+        e.preventDefault();
+        dropdownPanel.style.display = dropdownPanel.style.display === 'block' ? 'none' : 'block';
+      };
+      
+      // Set up month buttons
+      const monthButtons = document.querySelectorAll('.month-button');
+      monthButtons.forEach(btn => {
+        if (btn instanceof HTMLElement) {
+          btn.onclick = function(e) {
+            e.stopPropagation();
+            if (this instanceof HTMLElement) {
+              const month = this.getAttribute('data-month');
+              console.log('Selected month:', month);
+              
+              // Update button text
+              const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+              if (currentMonthDisplay && month) {
+                currentMonthDisplay.textContent = month.charAt(0).toUpperCase() + month.slice(1);
               }
-              continueButton.classList.remove('opacity-50', 'cursor-not-allowed');
-              console.log('Classes CSS mises à jour');
-            } else {
-              console.error('Bouton continue non trouvé dans le DOM');
-            }
-            
-            // Store selection in session storage for persistence
-            sessionStorage.setItem('reservation_selectedDate', radio.value);
-            
-            // Reset all other cards
-            document.querySelectorAll('.date-radio').forEach(r => {
-              if (r instanceof HTMLInputElement && r !== radio) {
-                const parentLabel = r.closest('.date-card');
-                if (parentLabel) {
-                  parentLabel.classList.remove('ring-2', 'ring-blue-500');
+              
+              // Show the corresponding month section and hide others
+              const monthSections = document.querySelectorAll('.month-section');
+              monthSections.forEach(section => {
+                if (section instanceof HTMLElement) {
+                  const sectionMonth = section.getAttribute('data-month');
+                  section.style.display = sectionMonth === month ? 'block' : 'none';
                 }
-              }
-            });
-            
-            // Highlight selected card
-            const parentLabel = radio.closest('.date-card');
-            if (parentLabel) {
-              parentLabel.classList.add('ring-2', 'ring-blue-500');
+              });
+              
+              // Hide dropdown
+              if (dropdownPanel) dropdownPanel.style.display = 'none';
             }
-            
-            console.log('Date sélectionnée:', radio.value);
-          }
-        });
+          };
+        }
       });
       
-      // Pre-select date based on previous selection if navigating back
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlDate = urlParams.get('selectedDate');
-      const savedDate = urlDate || sessionStorage.getItem('reservation_selectedDate');
-      
-      if (savedDate) {
-        console.log('Tentative de présélection de date:', savedDate);
-        const radioToSelect = document.querySelector(`.date-radio[value="${savedDate}"]`);
-        if (radioToSelect instanceof HTMLInputElement) {
-          radioToSelect.checked = true;
-          // Trigger change event to update button state
-          radioToSelect.dispatchEvent(new Event('change'));
-          
-          // Get the month of the selected date and select it in the buttons
-          const monthSection = radioToSelect.closest('.month-section');
-          if (monthSection) {
-            const selectedMonth = monthSection.getAttribute('data-month');
-            if (selectedMonth) {
-              // Find the month button with this data-month attribute
-              const monthButtonToSelect = document.querySelector(`.month-button[data-month="${selectedMonth}"]`);
-              if (monthButtonToSelect instanceof HTMLElement) {
-                // Simulate a click on this button to show the related month section
-                monthButtonToSelect.click();
-              }
-            }
-          }
-          
-          console.log('Date présélectionnée avec succès:', savedDate);
-        } else {
-          console.log('Bouton radio correspondant non trouvé');
+      // Close dropdown when clicking outside
+      document.body.addEventListener('click', function(e) {
+        const target = e.target;
+        if (target instanceof Node && dropdownButton && dropdownPanel &&
+            target !== dropdownButton && 
+            !dropdownButton.contains(target) && 
+            !dropdownPanel.contains(target) && 
+            dropdownPanel.style.display === 'block') {
+          dropdownPanel.style.display = 'none';
         }
-      } else {
-        console.log('Aucune date sauvegardée trouvée');
-      }
-      
-      // Handle month selection - commented out as these are now unused
-      // const monthButtons = document.querySelectorAll('.month-button');
-      // const monthSections = document.querySelectorAll('.month-section');
-      
-      // Let's just use the direct approach and not any of the previous functions
-      
-      // Gérer le formulaire avec Astro Actions - comme dans time.astro
-      const dateForm = document.getElementById('dateForm');
-      if (dateForm instanceof HTMLFormElement) {
-        console.log('Adding submit handler to form');
-        dateForm.addEventListener('submit', (e) => {
-          console.log('Form submit event triggered');
+      });
+    }
+    
+    // Handle date card selection
+    dateCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const radio = card.querySelector('.date-radio');
+        if (radio instanceof HTMLInputElement) {
+          // Set radio as checked
+          radio.checked = true;
           
-          // Vérifions si une date est sélectionnée
-          const checkedRadio = document.querySelector('input[name="selectedDate"]:checked');
+          // Highlight selected card and enable button
+          highlightSelectedCard(card);
+          enableContinueButton();
           
-          if (!checkedRadio) {
-            e.preventDefault(); // Empêche la soumission si aucune date sélectionnée
-            console.error('Aucune date sélectionnée lors de la soumission du formulaire');
-            alert('Veuillez sélectionner une date avant de continuer.');
-            return;
-          }
-          
-          if (checkedRadio instanceof HTMLInputElement) {
-            const selectedDate = checkedRadio.value;
-            
-            // Stocker la valeur dans sessionStorage pour référence côté client
-            sessionStorage.setItem('reservation_selectedDate', selectedDate);
-            
-            // Sauvegarder toutes les valeurs dans sessionStorage
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('vrType')) {
-              sessionStorage.setItem('reservation_vrType', params.get('vrType') || '');
-            }
-            if (params.get('numberOfPeople')) {
-              sessionStorage.setItem('reservation_numberOfPeople', params.get('numberOfPeople') || '');
-            }
-            if (params.get('duration')) {
-              sessionStorage.setItem('reservation_duration', params.get('duration') || '');
-            }
-            
-            // Ne pas empêcher la soumission normale - Astro Actions s'en chargera
-            console.log('Formulaire soumis avec date:', selectedDate);
-          }
-        });
-        
-        console.log('Form is ready for submission');
-      } else {
-        console.error('Form not found in DOM');
-      }
+          // Store in sessionStorage
+          sessionStorage.setItem('reservation_selectedDate', radio.value);
+          console.log('Date selected and stored:', radio.value);
+        }
+      });
     });
+    
+    // Check for preselected date
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDate = urlParams.get('selectedDate');
+    const savedDate = urlDate || sessionStorage.getItem('reservation_selectedDate');
+    
+    if (savedDate) {
+      console.log('Attempting to preselect date:', savedDate);
+      const radioToSelect = document.querySelector(`.date-radio[value="${savedDate}"]`);
+      if (radioToSelect instanceof HTMLInputElement) {
+        radioToSelect.checked = true;
+        const card = radioToSelect.closest('.date-card');
+        
+        // Highlight card and enable button
+        if (card) highlightSelectedCard(card);
+        enableContinueButton();
+        
+        // Show the correct month
+        const monthSection = radioToSelect.closest('.month-section');
+        if (monthSection) {
+          const selectedMonth = monthSection.getAttribute('data-month');
+          if (selectedMonth) {
+            // Update dropdown display
+            const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+            if (currentMonthDisplay) {
+              currentMonthDisplay.textContent = selectedMonth.charAt(0).toUpperCase() + selectedMonth.slice(1);
+            }
+            
+            // Show selected month section
+            const monthSections = document.querySelectorAll('.month-section');
+            monthSections.forEach(section => {
+              if (section instanceof HTMLElement) {
+                section.style.display = section === monthSection ? 'block' : 'none';
+              }
+            });
+          }
+        }
+        
+        console.log('Date preselected successfully:', savedDate);
+      } else {
+        console.log('Corresponding radio button not found for date:', savedDate);
+      }
+    }
+    
+    // Handle form submission
+    if (dateForm instanceof HTMLFormElement) {
+      console.log('Setting up form submission handler');
+      dateForm.addEventListener('submit', (e) => {
+        console.log('Form submit event triggered');
+        
+        // Check if a date is selected
+        const checkedRadio = document.querySelector('input[name="selectedDate"]:checked');
+        
+        if (!checkedRadio) {
+          e.preventDefault();
+          console.error('No date selected when submitting form');
+          alert('Veuillez sélectionner une date avant de continuer.');
+          return;
+        }
+        
+        if (checkedRadio instanceof HTMLInputElement) {
+          const selectedDate = checkedRadio.value;
+          
+          // Store all reservation data in sessionStorage
+          sessionStorage.setItem('reservation_selectedDate', selectedDate);
+          
+          const params = new URLSearchParams(window.location.search);
+          ['vrType', 'numberOfPeople', 'duration'].forEach(param => {
+            if (params.get(param)) {
+              sessionStorage.setItem(`reservation_${param}`, params.get(param) || '');
+            }
+          });
+          
+          console.log('Form validated and submitting with date:', selectedDate);
+          // Form will submit normally to trigger the Astro API POST handler
+        }
+      });
+    }
   });
 </script>
