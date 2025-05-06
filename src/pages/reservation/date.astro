@@ -32,49 +32,60 @@ const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juil
 
 // This is a duplicate definition, removed
 
-// Generate today plus the next 90 days of available dates (to ensure multiple months)
+// Generate dates starting from today for the next 6 months
 const now = new Date();
 const currentDay = now.getDate();
 const currentMonth = now.getMonth();
 const currentYear = now.getFullYear();
 
-// Generate dates starting from today (0) to 90 days in the future
-for (let i = 0; i <= 90; i++) {
-  // Create a new date object for each day
-  const futureDate = new Date(currentYear, currentMonth, currentDay + i);
-  const dateString = futureDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+// Generate dates for 6 months in the future
+for (let monthOffset = 0; monthOffset < 6; monthOffset++) {
+  // Calculate target month and year
+  const targetMonth = (currentMonth + monthOffset) % 12;
+  const targetYear = currentYear + Math.floor((currentMonth + monthOffset) / 12);
   
-  // Get the day of week (0 = Sunday, 1 = Monday, etc.)
-  const dayOfWeek = futureDate.getDay();
-  // Convert to our array index (our array starts with Monday at 0)
-  const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  // Get the number of days in this month
+  const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
   
-  // Get the actual month for this date
-  const monthIndex = futureDate.getMonth();
+  // Start from 1st day if we're looking at a future month, otherwise start from today
+  const startDay = monthOffset === 0 ? currentDay : 1;
   
-  // Format the day number
-  const dayNumber = futureDate.getDate();
-  
-  // Generate 3 time slots per day
-  const timeSlots: TimeSlot[] = [
-    { time: '10:00', available: Math.random() > 0.3 },
-    { time: '14:00', available: Math.random() > 0.3 },
-    { time: '18:00', available: Math.random() > 0.3 }
-  ];
-  
-  // Determine if the date is within the next 7 days
-  const isNextWeek = i > 0 && i <= 7;
-  
-  // Only add dates with at least one available time slot and skip today
-  if (timeSlots.some(slot => slot.available) && i > 0) {
-    availableDates.push({
-      date: dateString,
-      dayName: dayNames[dayIndex],
-      dayNumber: dayNumber,
-      month: monthNames[monthIndex],
-      timeSlots,
-      isSoon: isNextWeek
-    });
+  // Generate each day in the month
+  for (let day = startDay; day <= daysInMonth; day++) {
+    // Create a date object for each day
+    const futureDate = new Date(targetYear, targetMonth, day);
+    const dateString = futureDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    // Get the day of week (0 = Sunday, 1 = Monday, etc.)
+    const dayOfWeek = futureDate.getDay();
+    // Convert to our array index (our array starts with Monday at 0)
+    const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    // Format the day number
+    const dayNumber = futureDate.getDate();
+    
+    // Generate time slots from 14:00 to 22:00 (every 2 hours)
+    const timeSlots: TimeSlot[] = [
+      { time: '14:00', available: Math.random() > 0.3 },
+      { time: '16:00', available: Math.random() > 0.3 },
+      { time: '18:00', available: Math.random() > 0.3 },
+      { time: '20:00', available: Math.random() > 0.3 }
+    ];
+    
+    // Determine if the date is within the next 7 days
+    const isNextWeek = monthOffset === 0 && (day - currentDay) <= 7 && (day - currentDay) > 0;
+    
+    // Only add dates with at least one available time slot
+    if (timeSlots.some(slot => slot.available)) {
+      availableDates.push({
+        date: dateString,
+        dayName: dayNames[dayIndex],
+        dayNumber: dayNumber,
+        month: monthNames[targetMonth],
+        timeSlots,
+        isSoon: isNextWeek
+      });
+    }
   }
 }
 
@@ -125,50 +136,61 @@ const capitalizeMonth = (month) => {
         </h3>
       </div>
       
-      <!-- Month selector -->
+      <!-- Month selector dropdown -->
       <div class="month-selector mb-6">
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {(() => {
-            // Get current date information
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
-            
-            // Get all available months and sort them chronologically
-            const availableMonths = Object.keys(datesByMonth)
-              .map(monthName => {
-                const monthIndex = monthNames.indexOf(monthName);
-                return {
-                  name: monthName,
-                  index: monthIndex,
-                  year: monthIndex < currentMonth ? currentYear + 1 : currentYear,
-                  isCurrent: monthIndex === currentMonth
-                };
-              })
-              .sort((a, b) => {
-                // Sort by year first, then by month index
-                if (a.year !== b.year) return a.year - b.year;
-                return a.index - b.index;
-              });
-              
-            // Use the month order defined by monthNames
-            const sortedMonths = [...availableMonths].sort((a, b) => {
-              return monthOrder.indexOf(a.name.toLowerCase()) - monthOrder.indexOf(b.name.toLowerCase());
-            });
-            
-            // Return month options
-            return sortedMonths.map(month => (
-              <button 
-                type="button"
-                class={`month-button py-2 px-4 rounded-lg text-center transition-all w-full ${month.isCurrent ? 
-                  'bg-blue-100 text-blue-700 font-bold border-2 border-blue-500' : 
-                  'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'}`}
-                data-month={month.name}
-              >
-                {capitalizeMonth(month.name)}
-              </button>
-            ));
-          })()}
+        <div class="mb-3 relative">
+          <button 
+            type="button" 
+            id="monthDropdownButton"
+            class="w-full md:w-64 flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-lg font-medium text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <span id="currentMonthDisplay">{capitalizeMonth(monthNames[new Date().getMonth()])}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          
+          <!-- Dropdown panel (hidden by default) -->
+          <div id="monthDropdownPanel" class="mt-2 w-full md:w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto absolute" style="display: none;">
+            <div class="p-2 grid grid-cols-1 gap-1">
+              {(() => {
+                // Get current date information
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+                
+                // Get all available months and sort them chronologically
+                const availableMonths = Object.keys(datesByMonth)
+                  .map(monthName => {
+                    const monthIndex = monthNames.indexOf(monthName);
+                    return {
+                      name: monthName,
+                      index: monthIndex,
+                      year: monthIndex < currentMonth ? currentYear + 1 : currentYear,
+                      isCurrent: monthIndex === currentMonth
+                    };
+                  })
+                  .sort((a, b) => {
+                    // Sort by year first, then by month index
+                    if (a.year !== b.year) return a.year - b.year;
+                    return a.index - b.index;
+                  });
+                  
+                // Return month options
+                return availableMonths.map(month => (
+                  <button 
+                    type="button"
+                    class={`month-button py-2 px-4 rounded-md text-left transition-all w-full ${month.isCurrent ? 
+                      'bg-blue-100 text-blue-700 font-bold' : 
+                      'text-gray-700 hover:bg-gray-100'}`}
+                    data-month={month.name}
+                  >
+                    {capitalizeMonth(month.name)} {month.index < currentMonth ? currentYear + 1 : currentYear}
+                  </button>
+                ));
+              })()}
+            </div>
+          </div>
         </div>
       </div>
       
@@ -179,8 +201,18 @@ const capitalizeMonth = (month) => {
             a.date.localeCompare(b.date)
           );
           
+          // Hide all months by default - will be shown via JavaScript
+          // Use inline style to ensure they're hidden
+          const currentMonth = new Date().getMonth();
+          const monthIndex = monthNames.indexOf(month);
+          const isCurrentMonth = monthIndex === currentMonth;
+          
           return (
-            <div class="month-section pb-6 transition-all duration-300 ease-in-out" data-month={month}>
+            <div 
+              class={`month-section pb-6 transition-all duration-300 ease-in-out ${isCurrentMonth ? '' : 'hidden'}`} 
+              data-month={month} 
+              style={`display: ${isCurrentMonth ? 'block' : 'none'};`}
+            >
               <!-- Month headers removed from day container -->
               <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
                 {sortedDates.map((date: AvailableDate) => (
@@ -228,12 +260,85 @@ const capitalizeMonth = (month) => {
 </ReservationLayout>
 
 <script>
-  // Enhance form interactions and handle selections
-  document.addEventListener('DOMContentLoaded', () => {
-    // Retrieve data from URL or sessionStorage
-    const params = new URLSearchParams(window.location.search);
-    const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
-    const vrType = params.get('vrType') || sessionStorage.getItem('reservation_vrType');
+  // Add a pure JavaScript click handler that doesn't rely on Astro's hydration
+  document.addEventListener('DOMContentLoaded', function() {
+    // Manually add click handlers in plain JS
+    // This should work immediately when the page loads
+    const initializeDropdown = function() {
+      const dropdownButton = document.getElementById('monthDropdownButton');
+      const dropdownPanel = document.getElementById('monthDropdownPanel');
+      
+      if (dropdownButton && dropdownPanel) {
+        console.log('Initial dropdown setup');
+        
+        // Toggle dropdown on button click
+        dropdownButton.onclick = function(e) {
+          e.preventDefault();
+          console.log('Dropdown button clicked');
+          
+          // Toggle visibility
+          if (dropdownPanel.style.display === 'block') {
+            dropdownPanel.style.display = 'none';
+          } else {
+            dropdownPanel.style.display = 'block';
+          }
+        };
+        
+        // Set up month buttons
+        const monthButtons = document.querySelectorAll('.month-button');
+        monthButtons.forEach(btn => {
+          btn.onclick = function(e) {
+            e.stopPropagation();
+            const month = this.getAttribute('data-month');
+            console.log('Selected month:', month);
+            
+            // Update button text
+            const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+            if (currentMonthDisplay) {
+              currentMonthDisplay.textContent = month.charAt(0).toUpperCase() + month.slice(1);
+            }
+            
+            // Show the corresponding month section and hide others
+            const monthSections = document.querySelectorAll('.month-section');
+            monthSections.forEach(section => {
+              const sectionMonth = section.getAttribute('data-month');
+              if (sectionMonth === month) {
+                section.style.display = 'block';
+              } else {
+                section.style.display = 'none';
+              }
+            });
+            
+            // Hide dropdown
+            dropdownPanel.style.display = 'none';
+          };
+        });
+        
+        // Close when clicking outside
+        document.body.addEventListener('click', function(e) {
+          if (e.target !== dropdownButton && !dropdownButton.contains(e.target) && 
+              !dropdownPanel.contains(e.target) && dropdownPanel.style.display === 'block') {
+            dropdownPanel.style.display = 'none';
+          }
+        });
+      }
+    };
+    
+    // Call immediately
+    initializeDropdown();
+    
+    // Also wait a bit to ensure everything is ready
+    setTimeout(() => {
+      console.log('Delayed initialization');
+      initializeDropdown();
+      
+      // Enhance form interactions and handle selections
+      console.log('Initializing date selector...');
+      
+      // Retrieve data from URL or sessionStorage
+      const params = new URLSearchParams(window.location.search);
+      const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
+      const vrType = params.get('vrType') || sessionStorage.getItem('reservation_vrType');
     
     // Update hidden inputs if we have the data in sessionStorage
     if (numberOfPeople && !params.get('numberOfPeople')) {
@@ -340,103 +445,7 @@ const capitalizeMonth = (month) => {
     const monthButtons = document.querySelectorAll('.month-button');
     const monthSections = document.querySelectorAll('.month-section');
     
-    // Function to get the current month name in French
-    const getCurrentMonthName = () => {
-      // Get current month name from our defined array for consistency
-      const monthIndex = new Date().getMonth();
-      const monthName = monthNames[monthIndex];
-      return monthName.toLowerCase();
-    };
-    
-    // Function to show month buttons at top but only show current month section
-    const showTopMonthsButOnlyCurrentSection = () => {
-      const currentMonthName = getCurrentMonthName();
-      
-      // Show all month buttons but highlight current one
-      let firstButton = null;
-      let currentButton = null;
-      
-      monthButtons.forEach(button => {
-        if (!firstButton) firstButton = button;
-        
-        const buttonMonth = button.getAttribute('data-month');
-        if (buttonMonth && buttonMonth.toLowerCase() === currentMonthName) {
-          currentButton = button;
-          // Highlight current month button
-          button.classList.add('bg-blue-100', 'text-blue-700', 'font-bold', 'border-2', 'border-blue-500');
-          button.classList.remove('bg-gray-100', 'text-gray-700', 'border', 'border-gray-300');
-        } else {
-          // Regular styling for other months
-          button.classList.remove('bg-blue-100', 'text-blue-700', 'font-bold', 'border-2', 'border-blue-500');
-          button.classList.add('bg-gray-100', 'text-gray-700', 'border', 'border-gray-300');
-        }
-      });
-      
-      // Use current month button or fallback to first button if current month not found
-      const activeButton = currentButton || firstButton;
-      if (activeButton) {
-        const selectedMonth = activeButton.getAttribute('data-month');
-        
-        // Only show the selected month's section
-        monthSections.forEach(section => {
-          const sectionMonth = section.getAttribute('data-month');
-          if (sectionMonth && sectionMonth.toLowerCase() === selectedMonth.toLowerCase()) {
-            section.style.display = 'block';
-          } else {
-            section.style.display = 'none';
-          }
-        });
-      }
-    };
-    
-    // Add click handlers for month buttons
-    monthButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        const selectedMonth = button.getAttribute('data-month');
-        if (selectedMonth) {
-          // When clicked, we want to show this month's section and hide others
-          // Update button styles
-          monthButtons.forEach(btn => {
-            const btnMonth = btn.getAttribute('data-month');
-            const isSelected = btnMonth === selectedMonth;
-            
-            if (isSelected) {
-              btn.classList.add('bg-blue-100', 'text-blue-700', 'font-bold', 'border-2', 'border-blue-500');
-              btn.classList.remove('bg-gray-100', 'text-gray-700', 'border', 'border-gray-300');
-            } else {
-              btn.classList.remove('bg-blue-100', 'text-blue-700', 'font-bold', 'border-2', 'border-blue-500');
-              btn.classList.add('bg-gray-100', 'text-gray-700', 'border', 'border-gray-300');
-            }
-          });
-          
-          // Show only the selected month section
-          monthSections.forEach(section => {
-            const sectionMonth = section.getAttribute('data-month');
-            if (sectionMonth && sectionMonth.toLowerCase() === selectedMonth.toLowerCase()) {
-              // Show this section
-              section.style.display = 'block';
-            } else {
-              // Hide all other sections
-              section.style.display = 'none';
-            }
-          });
-        }
-      });
-    });
-    
-    // Initialize the UI - show all months but only current month's days
-    showTopMonthsButOnlyCurrentSection();
-    
-    // Initially hide all month sections except the current month
-    const currentMonthName = getCurrentMonthName();
-    monthSections.forEach(section => {
-      const sectionMonth = section.getAttribute('data-month');
-      if (sectionMonth && sectionMonth.toLowerCase() === currentMonthName) {
-        section.style.display = 'block';
-      } else {
-        section.style.display = 'none';
-      }
-    });
+    // Let's just use the direct approach and not any of the previous functions
     
     // Vérifier le formulaire avant soumission
     const dateForm = document.getElementById('dateForm');
@@ -480,5 +489,7 @@ const capitalizeMonth = (month) => {
         window.location.href = nextUrl;
       });
     }
+    
+    }, 100); // End of setTimeout to ensure DOM is loaded
   });
 </script>
