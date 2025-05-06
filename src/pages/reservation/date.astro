@@ -7,6 +7,44 @@ const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
 const vrType = Astro.url.searchParams.get('vrType');
 const duration = Astro.url.searchParams.get('duration');
 
+// Define the form action to handle date selection using the new Astro API
+export async function POST({ request }) {
+  const formData = await request.formData();
+  const selectedDate = formData.get('selectedDate');
+  
+  console.log('POST action received with selectedDate:', selectedDate);
+  
+  // Validate that a date was selected
+  if (!selectedDate) {
+    console.error('No date selected in POST request');
+    return new Response(JSON.stringify({
+      success: false,
+      message: 'Aucune date sélectionnée. Veuillez sélectionner une date.',
+    }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+  
+  // Format the query string with all parameters
+  const searchParams = new URLSearchParams();
+  searchParams.set('selectedDate', String(selectedDate));
+  
+  // Add other reservation parameters if they exist
+  if (numberOfPeople) searchParams.set('numberOfPeople', numberOfPeople);
+  if (vrType) searchParams.set('vrType', vrType);
+  if (duration) searchParams.set('duration', duration);
+  
+  // Log the redirect URL for debugging
+  const redirectUrl = `${new URL(request.url).origin}/reservation/time?${searchParams.toString()}`;
+  console.log('Redirecting to:', redirectUrl);
+  
+  // Redirect to the time selection page with the selected date
+  return Response.redirect(redirectUrl, 302);
+}
+
 // Define interfaces for our data structures
 interface TimeSlot {
   time: string;
@@ -31,7 +69,10 @@ const availableDates: AvailableDate[] = [];
 const dayNames = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
-// This is a duplicate definition, removed
+// Generate dates for each day
+const generateDates = () => {
+  // Implementation removed to avoid duplicate code
+}
 
 // Generate dates starting from today for the next 6 months
 // Use current timestamp - ignore TypeScript errors in Astro files
@@ -59,7 +100,14 @@ for (let monthOffset = 0; monthOffset < 6; monthOffset++) {
     // Create a date object for each day
     // @ts-ignore
     const futureDate = new Date(targetYear, targetMonth, day);
-    const dateString = futureDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    // Formatage manuel de la date pour éviter les problèmes de timezone avec toISOString()
+    const formattedYear = futureDate.getFullYear();
+    const formattedMonth = String(futureDate.getMonth() + 1).padStart(2, '0');
+    const formattedDay = String(futureDate.getDate()).padStart(2, '0');
+    const dateString = `${formattedYear}-${formattedMonth}-${formattedDay}`; // YYYY-MM-DD format
+    
+    console.log(`Date générée: ${dateString} pour ${day}/${targetMonth+1}/${targetYear} (jour de semaine: ${futureDate.getDay()}, jour affiché: ${dayNames[futureDate.getDay() === 0 ? 6 : futureDate.getDay() - 1]})`); 
     
     // Get the day of week (0 = Sunday, 1 = Monday, etc.)
     const dayOfWeek = futureDate.getDay();
@@ -124,8 +172,9 @@ const capitalizeMonth = (month: string): string => {
 ---
 
 <ReservationLayout title="Réservation - Sélection de la date" currentStep={4}>
-  <form method="get" action="/reservation/time" class="space-y-6" id="dateForm">
-    <!-- Pass along the previous steps' data -->
+  <form method="post" class="space-y-6" id="dateForm">
+    <!-- With Astro Actions, we don't need to pass these as hidden inputs, they'll be handled server-side -->
+    <!-- But we can keep them for client-side use if needed -->
     <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
     <input type="hidden" name="vrType" value={vrType} />
     <input type="hidden" name="duration" value={duration} />
@@ -257,8 +306,8 @@ const capitalizeMonth = (month: string): string => {
       <button
         type="submit"
         id="continueButton"
-        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors opacity-50 cursor-not-allowed"
         disabled
+        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors opacity-50 cursor-not-allowed"
       >
         Continuer →
       </button>
@@ -295,33 +344,35 @@ const capitalizeMonth = (month: string): string => {
         const monthButtons = document.querySelectorAll('.month-button');
         monthButtons.forEach(btn => {
           if (btn instanceof HTMLElement) {
-            btn.onclick = function(this: HTMLElement, e: Event) {
+            btn.onclick = function(e) {
               e.stopPropagation();
-              const month = this.getAttribute('data-month');
-              console.log('Selected month:', month);
-              
-              // Update button text
-              const currentMonthDisplay = document.getElementById('currentMonthDisplay');
-              if (currentMonthDisplay && month) {
-                currentMonthDisplay.textContent = month.charAt(0).toUpperCase() + month.slice(1);
-              }
-              
-              // Show the corresponding month section and hide others
-              const monthSections = document.querySelectorAll('.month-section');
-              monthSections.forEach(section => {
-                if (section instanceof HTMLElement) {
-                  const sectionMonth = section.getAttribute('data-month');
-                  if (sectionMonth === month) {
-                    section.style.display = 'block';
-                  } else {
-                    section.style.display = 'none';
-                  }
+              if (this instanceof HTMLElement) {
+                const month = this.getAttribute('data-month');
+                console.log('Selected month:', month);
+                
+                // Update button text
+                const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+                if (currentMonthDisplay && month) {
+                  currentMonthDisplay.textContent = month.charAt(0).toUpperCase() + month.slice(1);
                 }
-              });
-              
-              // Hide dropdown
-              if (dropdownPanel instanceof HTMLElement) {
-                dropdownPanel.style.display = 'none';
+                
+                // Show the corresponding month section and hide others
+                const monthSections = document.querySelectorAll('.month-section');
+                monthSections.forEach(section => {
+                  if (section instanceof HTMLElement) {
+                    const sectionMonth = section.getAttribute('data-month');
+                    if (sectionMonth === month) {
+                      section.style.display = 'block';
+                    } else {
+                      section.style.display = 'none';
+                    }
+                  }
+                });
+                
+                // Hide dropdown
+                if (dropdownPanel instanceof HTMLElement) {
+                  dropdownPanel.style.display = 'none';
+                }
               }
             };
           }
@@ -329,8 +380,8 @@ const capitalizeMonth = (month: string): string => {
         
         // Close when clicking outside
         document.body.addEventListener('click', function(e) {
-          const target = e.target as Node;
-          if (target && dropdownButton instanceof HTMLElement && dropdownPanel instanceof HTMLElement &&
+          const target = e.target;
+          if (target instanceof Node && dropdownButton instanceof HTMLElement && dropdownPanel instanceof HTMLElement &&
               target !== dropdownButton && 
               !dropdownButton.contains(target) && 
               !dropdownPanel.contains(target) && 
@@ -341,13 +392,34 @@ const capitalizeMonth = (month: string): string => {
       }
     };
     
+    // Check if a date is already selected to enable the button
+    const checkForPreselectedDate = function() {
+      console.log('Checking for preselected date...');
+      const preselectedRadio = document.querySelector('input[name="selectedDate"]:checked');
+      if (preselectedRadio) {
+        console.log('Found preselected date, enabling continue button');
+        const continueBtn = document.getElementById('continueButton');
+        if (continueBtn instanceof HTMLButtonElement) {
+          continueBtn.disabled = false;
+          continueBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      } else {
+        console.log('No preselected date found');
+      }
+    };
+    
     // Call immediately
     initializeDropdown();
+    checkForPreselectedDate();
+    
+    // No need for direct click handler on the button as the form itself will handle submission
+    // We'll just keep the validation and storage on the form submit event
     
     // Also wait a bit to ensure everything is ready
     setTimeout(() => {
       console.log('Delayed initialization');
       initializeDropdown();
+      checkForPreselectedDate();
       
       // Enhance form interactions and handle selections
       console.log('Initializing date selector...');
@@ -357,156 +429,191 @@ const capitalizeMonth = (month: string): string => {
       const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
       const vrType = params.get('vrType') || sessionStorage.getItem('reservation_vrType');
     
-    // Update hidden inputs if we have the data in sessionStorage
-    if (numberOfPeople && !params.get('numberOfPeople')) {
-      const hiddenInput = document.querySelector('input[name="numberOfPeople"]');
-      if (hiddenInput instanceof HTMLInputElement) {
-        hiddenInput.value = numberOfPeople;
-      }
-    }
-    
-    if (vrType && !params.get('vrType')) {
-      const hiddenInput = document.querySelector('input[name="vrType"]');
-      if (hiddenInput instanceof HTMLInputElement) {
-        hiddenInput.value = vrType;
-      }
-    }
-    
-    // Handle date selection
-    const radioButtons = document.querySelectorAll('.date-radio');
-    const continueButton = document.getElementById('continueButton');
-    const dateCards = document.querySelectorAll('.date-card');
-    
-    // Make the labels/cards clickable and trigger the radio button inside
-    dateCards.forEach(card => {
-      card.addEventListener('click', () => {
-        const radio = card.querySelector('.date-radio');
-        if (radio instanceof HTMLInputElement) {
-          radio.checked = true;
-          radio.dispatchEvent(new Event('change'));
+      // Update hidden inputs if we have the data in sessionStorage
+      if (numberOfPeople && !params.get('numberOfPeople')) {
+        const hiddenInput = document.querySelector('input[name="numberOfPeople"]');
+        if (hiddenInput instanceof HTMLInputElement) {
+          hiddenInput.value = numberOfPeople;
         }
-      });
-    });
-    
-    radioButtons.forEach(radio => {
-      radio.addEventListener('change', () => {
-        if (radio instanceof HTMLInputElement && radio.checked) {
-          // Enable continue button
-          if (continueButton) {
+      }
+      
+      if (vrType && !params.get('vrType')) {
+        const hiddenInput = document.querySelector('input[name="vrType"]');
+        if (hiddenInput instanceof HTMLInputElement) {
+          hiddenInput.value = vrType;
+        }
+      }
+      
+      // Handle date selection
+      const radioButtons = document.querySelectorAll('.date-radio');
+      const continueButton = document.getElementById('continueButton');
+      const dateCards = document.querySelectorAll('.date-card');
+      
+      // Make the labels/cards clickable and trigger the radio button inside
+      // Also directly enable the continue button
+      dateCards.forEach(card => {
+        card.addEventListener('click', () => {
+          const radio = card.querySelector('.date-radio');
+          if (radio instanceof HTMLInputElement) {
+            // Set radio as checked
+            radio.checked = true;
+            
+            // Directly enable continue button without waiting for change event
             if (continueButton instanceof HTMLButtonElement) {
+              console.log('Enabling continue button directly from card click');
               continueButton.disabled = false;
+              continueButton.classList.remove('opacity-50', 'cursor-not-allowed');
             }
-            continueButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            // Store in sessionStorage
+            sessionStorage.setItem('reservation_selectedDate', radio.value);
+            
+            // Reset all other cards
+            document.querySelectorAll('.date-card').forEach(otherCard => {
+              if (otherCard !== card) {
+                otherCard.classList.remove('ring-2', 'ring-blue-500');
+              }
+            });
+            
+            // Highlight this card
+            card.classList.add('ring-2', 'ring-blue-500');
+            
+            // Still dispatch change event for other listeners
+            radio.dispatchEvent(new Event('change'));
+            
+            console.log('Date card clicked:', radio.value);
           }
+        });
+      });
+      
+      radioButtons.forEach(radio => {
+        radio.addEventListener('change', () => {
+          if (radio instanceof HTMLInputElement && radio.checked) {
+            // Enable continue button - ajout de logs pour débogage
+            console.log('Radio sélectionné, activation du bouton continue...');
+            if (continueButton) {
+              console.log('Bouton continue trouvé:', continueButton);
+              if (continueButton instanceof HTMLButtonElement) {
+                continueButton.disabled = false;
+                console.log('Disabled mis à false');
+              } else {
+                console.log('Le bouton n\'est pas un HTMLButtonElement');
+              }
+              continueButton.classList.remove('opacity-50', 'cursor-not-allowed');
+              console.log('Classes CSS mises à jour');
+            } else {
+              console.error('Bouton continue non trouvé dans le DOM');
+            }
+            
+            // Store selection in session storage for persistence
+            sessionStorage.setItem('reservation_selectedDate', radio.value);
+            
+            // Reset all other cards
+            document.querySelectorAll('.date-radio').forEach(r => {
+              if (r instanceof HTMLInputElement && r !== radio) {
+                const parentLabel = r.closest('.date-card');
+                if (parentLabel) {
+                  parentLabel.classList.remove('ring-2', 'ring-blue-500');
+                }
+              }
+            });
+            
+            // Highlight selected card
+            const parentLabel = radio.closest('.date-card');
+            if (parentLabel) {
+              parentLabel.classList.add('ring-2', 'ring-blue-500');
+            }
+            
+            console.log('Date sélectionnée:', radio.value);
+          }
+        });
+      });
+      
+      // Pre-select date based on previous selection if navigating back
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlDate = urlParams.get('selectedDate');
+      const savedDate = urlDate || sessionStorage.getItem('reservation_selectedDate');
+      
+      if (savedDate) {
+        console.log('Tentative de présélection de date:', savedDate);
+        const radioToSelect = document.querySelector(`.date-radio[value="${savedDate}"]`);
+        if (radioToSelect instanceof HTMLInputElement) {
+          radioToSelect.checked = true;
+          // Trigger change event to update button state
+          radioToSelect.dispatchEvent(new Event('change'));
           
-          // Store selection in session storage for persistence
-          sessionStorage.setItem('reservation_selectedDate', radio.value);
-          
-          // Reset all other cards
-          document.querySelectorAll('.date-radio').forEach(r => {
-            if (r instanceof HTMLInputElement && r !== radio) {
-              const parentLabel = r.closest('.date-card');
-              if (parentLabel) {
-                parentLabel.classList.remove('ring-2', 'ring-blue-500');
+          // Get the month of the selected date and select it in the buttons
+          const monthSection = radioToSelect.closest('.month-section');
+          if (monthSection) {
+            const selectedMonth = monthSection.getAttribute('data-month');
+            if (selectedMonth) {
+              // Find the month button with this data-month attribute
+              const monthButtonToSelect = document.querySelector(`.month-button[data-month="${selectedMonth}"]`);
+              if (monthButtonToSelect instanceof HTMLElement) {
+                // Simulate a click on this button to show the related month section
+                monthButtonToSelect.click();
               }
             }
-          });
-          
-          // Highlight selected card
-          const parentLabel = radio.closest('.date-card');
-          if (parentLabel) {
-            parentLabel.classList.add('ring-2', 'ring-blue-500');
           }
           
-          console.log('Date sélectionnée:', radio.value);
+          console.log('Date présélectionnée avec succès:', savedDate);
+        } else {
+          console.log('Bouton radio correspondant non trouvé');
         }
-      });
-    });
-    
-    // Pre-select date based on previous selection if navigating back
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlDate = urlParams.get('selectedDate');
-    const savedDate = urlDate || sessionStorage.getItem('reservation_selectedDate');
-    
-    if (savedDate) {
-      console.log('Tentative de présélection de date:', savedDate);
-      const radioToSelect = document.querySelector(`.date-radio[value="${savedDate}"]`);
-      if (radioToSelect instanceof HTMLInputElement) {
-        radioToSelect.checked = true;
-        // Trigger change event to update button state
-        radioToSelect.dispatchEvent(new Event('change'));
-        
-        // Get the month of the selected date and select it in the buttons
-        const monthSection = radioToSelect.closest('.month-section');
-        if (monthSection) {
-          const selectedMonth = monthSection.getAttribute('data-month');
-          if (selectedMonth) {
-            // Find the month button with this data-month attribute
-            const monthButtonToSelect = document.querySelector(`.month-button[data-month="${selectedMonth}"]`);
-            if (monthButtonToSelect) {
-              // Simulate a click on this button to show the related month section
-              (monthButtonToSelect as HTMLElement).click();
-            }
-          }
-        }
-        
-        console.log('Date présélectionnée avec succès:', savedDate);
       } else {
-        console.log('Bouton radio correspondant non trouvé');
+        console.log('Aucune date sauvegardée trouvée');
       }
-    } else {
-      console.log('Aucune date sauvegardée trouvée');
-    }
-    
-    // Handle month selection - commented out as these are now unused
-    // const monthButtons = document.querySelectorAll('.month-button');
-    // const monthSections = document.querySelectorAll('.month-section');
-    
-    // Let's just use the direct approach and not any of the previous functions
-    
-    // Vérifier le formulaire avant soumission
-    const dateForm = document.getElementById('dateForm');
-    if (dateForm instanceof HTMLFormElement) {
-      dateForm.addEventListener('submit', (e) => {
-        e.preventDefault(); // Empêche la soumission normale du formulaire
+      
+      // Handle month selection - commented out as these are now unused
+      // const monthButtons = document.querySelectorAll('.month-button');
+      // const monthSections = document.querySelectorAll('.month-section');
+      
+      // Let's just use the direct approach and not any of the previous functions
+      
+      // Gérer le formulaire avec Astro Actions - comme dans time.astro
+      const dateForm = document.getElementById('dateForm');
+      if (dateForm instanceof HTMLFormElement) {
+        console.log('Adding submit handler to form');
+        dateForm.addEventListener('submit', (e) => {
+          console.log('Form submit event triggered');
+          
+          // Vérifions si une date est sélectionnée
+          const checkedRadio = document.querySelector('input[name="selectedDate"]:checked');
+          
+          if (!checkedRadio) {
+            e.preventDefault(); // Empêche la soumission si aucune date sélectionnée
+            console.error('Aucune date sélectionnée lors de la soumission du formulaire');
+            alert('Veuillez sélectionner une date avant de continuer.');
+            return;
+          }
+          
+          if (checkedRadio instanceof HTMLInputElement) {
+            const selectedDate = checkedRadio.value;
+            
+            // Stocker la valeur dans sessionStorage pour référence côté client
+            sessionStorage.setItem('reservation_selectedDate', selectedDate);
+            
+            // Sauvegarder toutes les valeurs dans sessionStorage
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('vrType')) {
+              sessionStorage.setItem('reservation_vrType', params.get('vrType') || '');
+            }
+            if (params.get('numberOfPeople')) {
+              sessionStorage.setItem('reservation_numberOfPeople', params.get('numberOfPeople') || '');
+            }
+            if (params.get('duration')) {
+              sessionStorage.setItem('reservation_duration', params.get('duration') || '');
+            }
+            
+            // Ne pas empêcher la soumission normale - Astro Actions s'en chargera
+            console.log('Formulaire soumis avec date:', selectedDate);
+          }
+        });
         
-        // Vérifions si une date est sélectionnée
-        const checkedRadio = document.querySelector('input[name="selectedDate"]:checked');
-        
-        console.log('Formulaire soumis, radio sélectionné:', checkedRadio);
-        
-        if (!checkedRadio) {
-          console.error('Aucune date sélectionnée lors de la soumission du formulaire');
-          alert('Veuillez sélectionner une date avant de continuer.');
-          return;
-        }
-        
-        console.log('Formulaire soumis avec date:', checkedRadio instanceof HTMLInputElement ? checkedRadio.value : 'undefined');
-        
-        // Assurons-nous que la valeur est bien dans session storage
-        if (checkedRadio instanceof HTMLInputElement) {
-          sessionStorage.setItem('reservation_selectedDate', checkedRadio.value);
-        }
-        
-        // Créer l'URL manuellement avec tous les paramètres nécessaires
-        const numberOfPeopleInput = dateForm.querySelector('input[name="numberOfPeople"]');
-        const numberOfPeopleParam = numberOfPeopleInput instanceof HTMLInputElement ? numberOfPeopleInput.value : '';
-        const vrTypeInput = dateForm.querySelector('input[name="vrType"]');
-        const vrTypeParam = vrTypeInput instanceof HTMLInputElement ? vrTypeInput.value : '';
-        const durationInput = dateForm.querySelector('input[name="duration"]');
-        const durationParam = durationInput instanceof HTMLInputElement ? durationInput.value : '';
-        const selectedDateParam = checkedRadio instanceof HTMLInputElement ? checkedRadio.value : '';
-        
-        // Construire l'URL avec les paramètres
-        const nextUrl = `/reservation/time?numberOfPeople=${encodeURIComponent(numberOfPeopleParam)}&vrType=${encodeURIComponent(vrTypeParam)}&duration=${encodeURIComponent(durationParam)}&selectedDate=${encodeURIComponent(selectedDateParam)}`;
-        
-        console.log('Redirection vers:', nextUrl);
-        
-        // Rediriger vers la page suivante
-        window.location.href = nextUrl;
-      });
-    }
-    
-    }, 100); // End of setTimeout to ensure DOM is loaded
+        console.log('Form is ready for submission');
+      } else {
+        console.error('Form not found in DOM');
+      }
+    });
   });
 </script>

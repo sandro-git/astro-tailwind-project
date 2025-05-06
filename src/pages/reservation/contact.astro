@@ -6,6 +6,40 @@ const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
 let vrType = Astro.url.searchParams.get('vrType');
 const duration = Astro.url.searchParams.get('duration');
 const selectedDateTime = Astro.url.searchParams.get('selectedDateTime');
+const selectedDate = Astro.url.searchParams.get('selectedDate');
+const selectedTime = Astro.url.searchParams.get('selectedTime');
+
+// Action pour le formulaire de contact utilisant l'API Astro
+export async function POST({ request }) {
+  const formData = await request.formData();
+  
+  // Valider les champs requis
+  const fullName = formData.get('fullName');
+  const email = formData.get('email');
+  const phoneNumber = formData.get('phoneNumber');
+  
+  // Validation simple
+  if (!fullName || !email || !phoneNumber) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: 'Tous les champs sont obligatoires.',
+    }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+  
+  // Récupérer toutes les données du formulaire et construire l'URL
+  const params = new URLSearchParams();
+  for (const [key, value] of formData.entries()) {
+    params.set(key, value.toString());
+  }
+  
+  // Rediriger vers la page de résumé
+  return Response.redirect(`${new URL(request.url).origin}/reservation/summary?${params.toString()}`, 302);
+}
 
 // Force VR standard pour les groupes de plus de 4 personnes (côté serveur)
 const parsedNumberOfPeople = parseInt(numberOfPeople || '0');
@@ -23,6 +57,9 @@ console.log('Raw selectedDateTime from URL:', selectedDateTime);
 if (selectedDateTime) {
   try {
     const [datePart, timePart] = selectedDateTime.split('T');
+    
+    // We're already using the adjusted date from time.astro, so we don't need
+    // to add a day here again, just format it directly
     const date = new Date(datePart);
     
     formattedDate = date.toLocaleDateString('fr-FR', { 
@@ -34,7 +71,7 @@ if (selectedDateTime) {
     
     formattedTime = timePart;
     
-    console.log('Formatted date and time:', { selectedDateTime, formattedDate, formattedTime });
+    console.log('Formatted date and time:', { selectedDateTime, datePart, formattedDate, formattedTime });
   } catch (error) {
     console.error('Error formatting date:', error);
   }
@@ -44,12 +81,14 @@ if (selectedDateTime) {
 ---
 
 <ReservationLayout title="Réservation - Vos coordonnées" currentStep={6}>
-  <form method="get" action="/reservation/summary" class="space-y-6" id="contactForm">
+  <form method="post" class="space-y-6" id="contactForm">
     <!-- Pass along the previous steps' data -->
     <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
     <input type="hidden" name="vrType" value={vrType} />
     <input type="hidden" name="duration" value={duration} />
     <input type="hidden" name="selectedDateTime" value={selectedDateTime} />
+    <input type="hidden" name="selectedDate" value={selectedDate} />
+    <input type="hidden" name="selectedTime" value={selectedTime} />
     
     <div>
       <h2 class="text-2xl font-bold text-gray-900 mb-4">Vos coordonnées</h2>
@@ -65,7 +104,11 @@ if (selectedDateTime) {
           <div class="ml-3">
             <p class="text-sm text-blue-700">
               Votre réservation : <span class="font-medium" id="numPeopleDisplay">{numberOfPeople} personne{numberOfPeople && parseInt(numberOfPeople) > 1 ? 's' : ''}</span> • 
-              <span class="font-medium" id="vrTypeDisplay">{vrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard'}</span> • 
+              <span class="font-medium" id="vrTypeDisplay">{
+  vrType === 'VR_WIRELESS' || vrType === 'wireless' ? 'VR Sans Fil' : 
+  vrType === 'VR_WIRED' || vrType === 'wired' || vrType === 'VR' ? 'VR Standard' : 
+  'Chargement...'
+}</span> • 
               <span class="font-medium" id="durationDisplay">{duration} minutes</span> • 
               <span class="font-medium" id="dateTimeDisplay">{formattedDate ? `${formattedDate} à ${formattedTime}` : 'Chargement de la date...'}</span>
             </p>
@@ -223,7 +266,13 @@ if (selectedDateTime) {
           sessionStorage.setItem('reservation_vrType', 'VR');
         }
         
-        displayElement.textContent = correctedVrType === 'VR_WIRELESS' ? 'VR Sans Fil' : 'VR Standard';
+        if (correctedVrType === 'VR_WIRELESS' || correctedVrType === 'wireless') {
+          displayElement.textContent = 'VR Sans Fil';
+        } else if (correctedVrType === 'VR_WIRED' || correctedVrType === 'wired' || correctedVrType === 'VR') {
+          displayElement.textContent = 'VR Standard';
+        } else {
+          displayElement.textContent = correctedVrType; // Fallback display
+        }
         console.log('Updated vrTypeDisplay:', displayElement.textContent);
       } else {
         console.error('vrTypeDisplay element not found');
@@ -266,6 +315,9 @@ if (selectedDateTime) {
         try {
           console.log('Formatting date client-side:', selectedDateTimeValue);
           const [datePart, timePart] = selectedDateTimeValue.split('T');
+          
+          // We're already using the adjusted date from time.astro, so we don't need
+          // to add a day here again, just format it directly
           const date = new Date(datePart);
           
           const formattedDate = date.toLocaleDateString('fr-FR', { 
@@ -327,22 +379,26 @@ if (selectedDateTime) {
     const contactForm = document.getElementById('contactForm');
     if (contactForm instanceof HTMLFormElement) {
       contactForm.addEventListener('submit', (e) => {
-        e.preventDefault(); // Empêche la soumission normale
+        // Avec Astro Actions, nous pouvons laisser la soumission normale se faire
+        // Mais on vérifie quand même que les champs sont remplis
         
-        // Sauvegarder toutes les valeurs des champs dans sessionStorage
+        // Vérifier tous les champs requis
         const formInputs = contactForm.querySelectorAll('input[name="fullName"], input[name="email"], input[name="phoneNumber"]');
         let allFieldsFilled = true;
         
         formInputs.forEach(input => {
           if (input instanceof HTMLInputElement) {
             if (!input.value.trim()) {
+              e.preventDefault(); // Empêcher la soumission si un champ est vide
               allFieldsFilled = false;
               input.classList.add('border-red-500');
-              return;
+            } else {
+              input.classList.remove('border-red-500');
+              
+              // Sauvegarde dans sessionStorage pour référence côté client
+              console.log(`Sauvegarde de ${input.name} = ${input.value} dans sessionStorage`);
+              sessionStorage.setItem(`reservation_${input.name}`, input.value);
             }
-            
-            console.log(`Sauvegarde de ${input.name} = ${input.value} dans sessionStorage`);
-            sessionStorage.setItem(`reservation_${input.name}`, input.value);
           }
         });
         
@@ -351,35 +407,7 @@ if (selectedDateTime) {
           return;
         }
         
-        // Construire l'URL manuellement avec tous les paramètres
-        const params = new URLSearchParams();
-        
-        // Ajouter les valeurs des étapes précédentes
-        const prevParams = ['numberOfPeople', 'vrType', 'duration', 'selectedDateTime'];
-        prevParams.forEach(param => {
-          const hiddenInput = contactForm.querySelector(`input[name="${param}"]`);
-          if (hiddenInput instanceof HTMLInputElement && hiddenInput.value) {
-            params.append(param, hiddenInput.value);
-          } else {
-            const storedValue = sessionStorage.getItem(`reservation_${param}`);
-            if (storedValue) {
-              params.append(param, storedValue);
-            }
-          }
-        });
-        
-        // Ajouter les valeurs du formulaire courant
-        formInputs.forEach(input => {
-          if (input instanceof HTMLInputElement) {
-            params.append(input.name, input.value);
-          }
-        });
-        
-        // Afficher les paramètres finaux pour debug
-        console.log('Paramètres d\'URL finaux:', params.toString());
-        
-        // Rediriger vers la page summary avec tous les paramètres
-        window.location.href = `/reservation/summary?${params.toString()}`;
+        console.log('Formulaire soumis avec succès via Astro Actions');
       });
     }
   });
