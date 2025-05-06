@@ -12,12 +12,13 @@ let formattedDate = '';
 if (selectedDate) {
   try {
     const date = new Date(selectedDate);
-    formattedDate = date.toLocaleDateString('fr-FR', { 
+    const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
       day: 'numeric', 
       month: 'long',
       year: 'numeric'
-    });
+    };
+    formattedDate = date.toLocaleDateString('fr-FR', options);
   } catch (error) {
     console.error('Erreur lors du formatage de la date:', error);
   }
@@ -220,7 +221,12 @@ const availableTimeSlots = timeSlots.filter(slot => !unavailableTimesSet.has(slo
         if (dateValue) {
           try {
             const date = new Date(dateValue);
-            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            const options: Intl.DateTimeFormatOptions = { 
+              weekday: 'long', 
+              day: 'numeric', 
+              month: 'long', 
+              year: 'numeric' 
+            };
             const formattedDate = date.toLocaleDateString('fr-FR', options);
             jsDateEl.textContent = formattedDate;
             jsDateEl.classList.remove('italic', 'text-gray-500');
