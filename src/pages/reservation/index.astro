@@ -1,32 +1,40 @@
 ---
-import ReservationLayout from '../../layouts/ReservationLayout.astro';
+import ReservationLayout from "../../layouts/ReservationLayout.astro";
 ---
 
 <ReservationLayout title="Réservation - Nombre de personnes" currentStep={1}>
-  <form method="get" action="/reservation/vr-type" class="space-y-6" id="peopleForm">
+  <form class="space-y-6" id="peopleForm">
     <div>
-      <h2 class="text-2xl font-bold text-gray-900 mb-4">Combien de personnes ?</h2>
-      <p class="text-gray-600 mb-6">Sélectionnez le nombre de participants (maximum 6 personnes)</p>
-      
-      <div class="grid grid-cols-3 gap-4 max-w-md mx-auto sm:max-w-none sm:grid-cols-6">
-        {[1, 2, 3, 4, 5, 6].map((number) => (
-          <label class="relative block">
-            <input 
-              type="radio" 
-              name="numberOfPeople" 
-              value={number} 
-              class="peer sr-only" 
-              required
-              checked={number === 1}
-            />
-            <div class="h-24 flex items-center justify-center rounded-lg border-2 border-gray-300 bg-white text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
-              <span class="text-xl font-medium">{number}</span>
-            </div>
-          </label>
-        ))}
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">
+        Combien de personnes ?
+      </h2>
+      <p class="text-gray-600 mb-6">
+        Sélectionnez le nombre de participants (maximum 6 personnes)
+      </p>
+
+      <div
+        class="grid grid-cols-3 gap-4 max-w-md mx-auto sm:max-w-none sm:grid-cols-6"
+      >
+        {
+          [1, 2, 3, 4, 5, 6].map((number) => (
+            <label class="relative block">
+              <input
+                type="radio"
+                name="numberOfPeople"
+                value={number}
+                class="peer sr-only"
+                required
+                checked={number === 1}
+              />
+              <div class="h-24 flex items-center justify-center rounded-lg border-2 border-gray-300 bg-white text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+                <span class="text-xl font-medium">{number}</span>
+              </div>
+            </label>
+          ))
+        }
       </div>
     </div>
-    
+
     <div class="pt-4 flex justify-end">
       <button
         type="submit"
@@ -39,60 +47,16 @@ import ReservationLayout from '../../layouts/ReservationLayout.astro';
 </ReservationLayout>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Sélectionner le formulaire
-    const peopleForm = document.getElementById('peopleForm');
-    
-    // Récupérer les boutons radio
-    const radioButtons = document.querySelectorAll('input[name="numberOfPeople"]');
-    
-    // Ajouter un gestionnaire d'événement change à chaque bouton radio
-    radioButtons.forEach(radio => {
-      radio.addEventListener('change', () => {
-        if (radio instanceof HTMLInputElement && radio.checked) {
-          // Stocker la valeur dans sessionStorage
-          sessionStorage.setItem('reservation_numberOfPeople', radio.value);
-          console.log('Nombre de personnes sauvegardé:', radio.value);
-        }
-      });
-    });
-    
-    // Vérifier s'il y a une valeur sauvegardée
-    const savedValue = sessionStorage.getItem('reservation_numberOfPeople');
-    if (savedValue) {
-      // Sélectionner le bouton radio correspondant
-      const radioToSelect = document.querySelector(`input[name="numberOfPeople"][value="${savedValue}"]`);
-      if (radioToSelect instanceof HTMLInputElement) {
-        radioToSelect.checked = true;
-      }
-    }
-    
-    // Ajouter un gestionnaire d'événement pour la soumission du formulaire
-    if (peopleForm instanceof HTMLFormElement) {
-      peopleForm.addEventListener('submit', () => {
-        // Récupérer la valeur sélectionnée
-        const selectedRadio = document.querySelector('input[name="numberOfPeople"]:checked');
-        if (selectedRadio instanceof HTMLInputElement) {
-          // Stocker la valeur dans sessionStorage
-          sessionStorage.setItem('reservation_numberOfPeople', selectedRadio.value);
-          console.log('Formulaire soumis avec nombre de personnes:', selectedRadio.value);
-        }
-      });
-    }
-  });
-</script>
+  import { actions } from "astro:actions";
+  import { navigate } from "astro:transitions/client";
 
-<script>
-  // Enhance radio button UX
-  document.addEventListener('DOMContentLoaded', () => {
-    const radioLabels = document.querySelectorAll('input[name="numberOfPeople"]');
-    radioLabels.forEach(radio => {
-      radio.addEventListener('change', () => {
-        // Store selection in sessionStorage for multi-step form
-        if (radio instanceof HTMLInputElement && radio.checked) {
-          sessionStorage.setItem('reservation_numberOfPeople', radio.value);
-        }
-      });
-    });
+  // This script handles the form submission and retrieves the selected number of people
+
+  const form = document.querySelector("form");
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const { error } = await actions.numberOfPeople(formData);
+    if (!error) navigate("/reservation/vr-type");
   });
 </script>
