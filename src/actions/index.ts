@@ -1,5 +1,5 @@
 import { defineAction } from 'astro:actions';
-import { number, z } from 'astro:schema';
+import { z } from 'astro:schema';
 
 export const server = {
   numberOfPeople: defineAction({ 
@@ -7,11 +7,25 @@ export const server = {
     input: z.object({
       numberOfPeople: z.number()
     }),
-    handler: async ({ numberOfPeople }) => {
-    
-    //   return {
-    //     numberOfPeople,
-    //   };
+    handler: async (input,context ) => {
+      context.session.set('numberOfPeople', input.numberOfPeople);
     }
-  })
+  }),
+  typeOfVr: defineAction({
+    accept: "form",
+    input: z.object({
+      typeOfVr: z.enum(['VR Sans Fil', 'VR'])}),
+    handler: async (input, context) => {
+      context.session.set('typeOfVr', input.typeOfVr);
+    }
+  }),
+  duration: defineAction({
+    accept: "form",
+    input: z.object({
+      duration: z.enum(['30', '60'])
+    }),
+    handler: async (input, context) => {
+      context.session.set('duration', input.duration);
+    }
+  }),
 }

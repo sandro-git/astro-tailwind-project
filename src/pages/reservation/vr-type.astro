@@ -1,75 +1,126 @@
 ---
-import ReservationLayout from '../../layouts/ReservationLayout.astro';
+import ReservationLayout from "../../layouts/ReservationLayout.astro";
 
 // This is server-side Astro code
-const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
-const parsedNumPeople = numberOfPeople ? parseInt(numberOfPeople) : 0;
-const showOnlyVR = parsedNumPeople > 4;
+const numberOfPeople = await Astro.session.get("numberOfPeople");
 
-console.log('Server-side values:', { numberOfPeople, parsedNumPeople, showOnlyVR });
+const showOnlyVR = numberOfPeople > 4;
 ---
 
 <ReservationLayout title="Réservation - Type de VR" currentStep={2}>
-  <form method="get" action="/reservation/duration" class="space-y-6" id="vrTypeForm">
+  <form class="space-y-6" id="vrTypeForm">
     <!-- Pass along the previous step's data -->
     <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
-    
+
     <div>
-      <h2 class="text-2xl font-bold text-gray-900 mb-4">Choisissez votre type de VR</h2>
-      {showOnlyVR ? (
-        <p class="text-amber-600 mb-6">Pour {numberOfPeople} personnes, seule l'option VR standard est disponible.</p>
-      ) : (
-        <p class="text-gray-600 mb-6">Sélectionnez le type de réalité virtuelle que vous souhaitez utiliser</p>
-      )}
-      
-      <div class={`grid grid-cols-1 ${!showOnlyVR ? 'sm:grid-cols-2' : ''} gap-6 max-w-lg mx-auto sm:max-w-none`}>
+      <h2 class="text-2xl font-bold text-gray-900 mb-4">
+        Choisissez votre type de VR
+      </h2>
+      <p class="text-gray-600">Pour {numberOfPeople} personnes</p>
+      {
+        showOnlyVR ? (
+          <p class="text-amber-600 mb-6">
+            Pour {numberOfPeople} personnes, seule l'option VR standard est
+            disponible.
+          </p>
+        ) : (
+          <p class="text-gray-600 mb-6">
+            Sélectionnez le type de réalité virtuelle que vous souhaitez
+            utiliser
+          </p>
+        )
+      }
+
+      <div
+        class={`grid grid-cols-1 ${!showOnlyVR ? "sm:grid-cols-2" : ""} gap-6 max-w-lg mx-auto sm:max-w-none`}
+      >
         {/* Option VR Standard - toujours affichée */}
         <label class="relative block">
-          <input 
-            type="radio" 
-            name="vrType" 
-            value="VR" 
-            class="peer sr-only" 
+          <input
+            type="radio"
+            name="typeOfVr"
+            value="VR"
+            class="peer sr-only"
             required
             checked
           />
-          <div class="h-40 flex flex-col items-center justify-center rounded-lg border-2 border-gray-300 bg-white p-4 text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-700 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          <div
+            class="h-40 flex flex-col items-center justify-center rounded-lg border-2 border-gray-300 bg-white p-4 text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-12 w-12 text-gray-700 mb-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              ></path>
             </svg>
             <span class="text-lg font-medium">VR Standard</span>
-            <span class="text-sm text-gray-500 mt-1">Casque VR filaire avec contrôleurs</span>
-            {showOnlyVR && (
-              <span class="text-xs text-amber-500 mt-2">Seule option disponible pour {numberOfPeople} personnes</span>
-            )}
+            <span class="text-sm text-gray-500 mt-1"
+              >Casque VR filaire avec contrôleurs</span
+            >
+            {
+              showOnlyVR && (
+                <span class="text-xs text-amber-500 mt-2">
+                  Seule option disponible pour {numberOfPeople} personnes
+                </span>
+              )
+            }
           </div>
         </label>
-        
-        {/* Option VR Sans Fil - n'est PAS rendue du tout dans le DOM si showOnlyVR est true */}
-        {!showOnlyVR && (
-          <label class="relative block" id="wirelessVROption">
-            <input 
-              type="radio" 
-              name="vrType" 
-              value="VR_WIRELESS" 
-              class="peer sr-only"
-            />
-            <div class="h-40 flex flex-col items-center justify-center rounded-lg border-2 border-gray-300 bg-white p-4 text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-700 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <span class="text-lg font-medium">VR Sans Fil</span>
-              <span class="text-sm text-gray-500 mt-1">Casque VR sans fil avec contrôleurs</span>
-              <span class="text-xs text-gray-500 mt-1">(4 personnes maximum)</span>
-            </div>
-          </label>
-        )}
+
+        {
+          /* Option VR Sans Fil - n'est PAS rendue du tout dans le DOM si showOnlyVR est true */
+        }
+        {
+          !showOnlyVR && (
+            <label class="relative block" id="wirelessVROption">
+              <input
+                type="radio"
+                name="typeOfVr"
+                value="VR Sans Fil"
+                class="peer sr-only"
+              />
+              <div class="h-40 flex flex-col items-center justify-center rounded-lg border-2 border-gray-300 bg-white p-4 text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-12 w-12 text-gray-700 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                <span class="text-lg font-medium">VR Sans Fil</span>
+                <span class="text-sm text-gray-500 mt-1">
+                  Casque VR sans fil avec contrôleurs
+                </span>
+                <span class="text-xs text-gray-500 mt-1">
+                  (4 personnes maximum)
+                </span>
+              </div>
+            </label>
+          )
+        }
       </div>
     </div>
-    
-    <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
-      <a 
-        href="/reservation" 
+
+    <div
+      class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between"
+    >
+      <a
+        href="/reservation"
         class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
       >
         ← Retour
@@ -85,112 +136,16 @@ console.log('Server-side values:', { numberOfPeople, parsedNumPeople, showOnlyVR
 </ReservationLayout>
 
 <script>
-  // Enhance radio button UX and handle form data persistence
-  document.addEventListener('DOMContentLoaded', () => {
-    // Retrieve numberOfPeople from URL or sessionStorage
-    const params = new URLSearchParams(window.location.search);
-    const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
-    const parsedNumberOfPeople = numberOfPeople ? parseInt(numberOfPeople) : 0;
-    
-    console.log('Client-side values:', { numberOfPeople, parsedNumberOfPeople });
-    
-    // Update hidden input if we have the data in sessionStorage
-    if (numberOfPeople && !params.get('numberOfPeople')) {
-      const hiddenInput = document.querySelector('input[name="numberOfPeople"]');
-      if (hiddenInput instanceof HTMLInputElement) {
-        hiddenInput.value = numberOfPeople;
-      }
-    }
-    
-    // Si le nombre de personnes est supérieur à 4, cacher manuellement l'option VR sans fil
-    if (parsedNumberOfPeople > 4) {
-      const wirelessOption = document.querySelector('input[name="vrType"][value="VR_WIRELESS"]');
-      if (wirelessOption instanceof HTMLInputElement) {
-        const parentLabel = wirelessOption.closest('label');
-        if (parentLabel) {
-          parentLabel.style.display = 'none';
-        }
-      }
-    }
-    
-    // Handle VR type selection
-    const radioButtons = document.querySelectorAll('input[name="vrType"]');
-    radioButtons.forEach(radio => {
-      radio.addEventListener('change', () => {
-        if (radio instanceof HTMLInputElement && radio.checked) {
-          // Only allow VR_WIRELESS if numPeople <= 4
-          if (parsedNumberOfPeople > 4 && radio.value === 'VR_WIRELESS') {
-            console.log('Tentative de sélection de VR sans fil pour plus de 4 personnes - forcé à VR standard');
-            
-            // Force VR standard instead
-            const standardVRRadio = document.querySelector('input[name="vrType"][value="VR"]');
-            if (standardVRRadio instanceof HTMLInputElement) {
-              standardVRRadio.checked = true;
-              radio.checked = false;
-              sessionStorage.setItem('reservation_vrType', 'VR');
-              
-              // Inform the user
-              setTimeout(() => {
-                alert(`Pour un groupe de ${parsedNumberOfPeople} personnes, seule l'option VR standard est disponible.`);
-              }, 100);
-              
-              return;
-            }
-          }
-          
-          // Store the selection
-          sessionStorage.setItem('reservation_vrType', radio.value);
-        }
-      });
-    });
-    
-    // Pre-select VR type based on previous selection if navigating back
-    
-    // Si plus de 4 personnes, forcer la sélection de VR standard
-    if (parsedNumberOfPeople > 4) {
-      console.log("Groupe de plus de 4 personnes, forçage de VR standard");
-      const standardVRRadio = document.querySelector('input[name="vrType"][value="VR"]');
-      if (standardVRRadio instanceof HTMLInputElement) {
-        standardVRRadio.checked = true;
-        // Mettre à jour le session storage également
-        sessionStorage.setItem('reservation_vrType', 'VR');
-      }
-    } else {
-      // Sinon, utiliser la valeur précédemment sauvegardée
-      const savedVrType = sessionStorage.getItem('reservation_vrType');
-      if (savedVrType) {
-        const radioToSelect = document.querySelector(`input[name="vrType"][value="${savedVrType}"]`);
-        if (radioToSelect instanceof HTMLInputElement) {
-          radioToSelect.checked = true;
-        }
-      }
-    }
-    
-    // Vérification avant soumission du formulaire
-    const vrTypeForm = document.getElementById('vrTypeForm');
-    if (vrTypeForm instanceof HTMLFormElement) {
-      vrTypeForm.addEventListener('submit', (e) => {
-        // Vérifier si c'est un groupe de plus de 4 personnes
-        const selectedVRType = document.querySelector('input[name="vrType"]:checked');
-        
-        if (parsedNumberOfPeople > 4 && selectedVRType instanceof HTMLInputElement && selectedVRType.value === 'VR_WIRELESS') {
-          e.preventDefault();
-          console.log('Tentative de sélection de VR sans fil pour un groupe de plus de 4 personnes');
-          
-          // Forcer la sélection de VR standard
-          const standardVRRadio = document.querySelector('input[name="vrType"][value="VR"]');
-          if (standardVRRadio instanceof HTMLInputElement) {
-            standardVRRadio.checked = true;
-            sessionStorage.setItem('reservation_vrType', 'VR');
-            alert('Pour un groupe de ' + parsedNumberOfPeople + ' personnes, seule l\'option VR standard est disponible.');
-            
-            // Soumettre le formulaire après un court délai
-            setTimeout(() => {
-              vrTypeForm.submit();
-            }, 100);
-          }
-        }
-      });
-    }
+  import { actions } from "astro:actions";
+  import { navigate } from "astro:transitions/client";
+
+  // This script handles the form submission and retrieves the selected number of people
+
+  const form = document.querySelector("form");
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const { error } = await actions.typeOfVr(formData);
+    if (!error) navigate("/reservation/duration");
   });
 </script>
