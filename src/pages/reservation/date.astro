@@ -2,10 +2,6 @@
 import ReservationLayout from '../../layouts/ReservationLayout.astro';
 import { getLocalTimeZone, today } from '@internationalized/date';
 
-// Get query parameters from previous steps
-const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
-const vrType = Astro.url.searchParams.get('vrType');
-const duration = Astro.url.searchParams.get('duration');
 
 // Define the form action to handle date selection using the new Astro API
 export async function POST({ request }) {
@@ -31,11 +27,6 @@ export async function POST({ request }) {
   // Format the query string with all parameters
   const searchParams = new URLSearchParams();
   searchParams.set('selectedDate', String(selectedDate));
-  
-  // Add other reservation parameters if they exist
-  if (numberOfPeople) searchParams.set('numberOfPeople', numberOfPeople);
-  if (vrType) searchParams.set('vrType', vrType);
-  if (duration) searchParams.set('duration', duration);
   
   // Log the redirect URL for debugging
   const redirectUrl = `${new URL(request.url).origin}/reservation/time?${searchParams.toString()}`;
@@ -69,15 +60,10 @@ const availableDates: AvailableDate[] = [];
 const dayNames = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
-// Generate dates for each day
-const generateDates = () => {
-  // Implementation removed to avoid duplicate code
-}
 
 // Generate dates starting from today for the next 6 months
 // Use current timestamp - ignore TypeScript errors in Astro files
-// @ts-ignore
-const now = new Date();
+const now = new globalThis.Date();
 const currentDay = now.getDate();
 const currentMonth = now.getMonth();
 const currentYear = now.getFullYear();
@@ -172,10 +158,6 @@ const capitalizeMonth = (month: string): string => {
 <ReservationLayout title="Réservation - Sélection de la date" currentStep={4}>
   <form method="post" class="space-y-6" id="dateForm">
     <!-- With Astro Actions, we don't need to pass these as hidden inputs, they'll be handled server-side -->
-    <!-- But we can keep them for client-side use if needed -->
-    <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
-    <input type="hidden" name="vrType" value={vrType} />
-    <input type="hidden" name="duration" value={duration} />
     
     <div>
       <h2 class="text-2xl font-bold text-gray-900 mb-4">Choisissez une date</h2>
@@ -296,7 +278,7 @@ const capitalizeMonth = (month: string): string => {
     
     <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
       <a 
-        href={`/reservation/duration?numberOfPeople=${numberOfPeople}&vrType=${vrType}`} 
+        href={`/reservation/duration`} 
         class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
       >
         ← Retour
