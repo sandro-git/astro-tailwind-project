@@ -23,6 +23,9 @@ importers:
       astro:
         specifier: ^5.7.10
         version: 5.7.10(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.29.2)(rollup@4.40.1)(typescript@5.8.3)(yaml@2.7.1)
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       tailwindcss:
         specifier: ^4.1.5
         version: 4.1.5
@@ -908,6 +911,9 @@ packages:
   data-uri-to-buffer@4.0.1:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
     engines: {node: '>= 12'}
+
+  date-fns@4.1.0:
+    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
 
   debug@4.4.0:
     resolution: {integrity: sha512-6WTZ/IxCY/T6BALoZHaE4ctp9xm+Z5kY/pzYaCHRFeyVhojxlrm+46y68HA6hr0TcwEssoxNiDEUJQjfPZ/RYA==}
@@ -3192,6 +3198,8 @@ snapshots:
   cssesc@3.0.0: {}
 
   data-uri-to-buffer@4.0.1: {}
+
+  date-fns@4.1.0: {}
 
   debug@4.4.0:
     dependencies:
