@@ -17,43 +17,7 @@ import {
   parseISO,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-
-// Les fonctions POST et interfaces restent inchangées
-export async function POST({ request }) {
-  const formData = await request.formData();
-  const selectedDate = formData.get("selectedDate");
-
-  console.log("POST action received with selectedDate:", selectedDate);
-
-  // Validate that a date was selected
-  if (!selectedDate) {
-    console.error("No date selected in POST request");
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Aucune date sélectionnée. Veuillez sélectionner une date.",
-      }),
-      {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-  }
-
-  // Format the query string with all parameters
-  const searchParams = new URLSearchParams();
-  searchParams.set("selectedDate", String(selectedDate));
-
-  // Log the redirect URL for debugging
-  const redirectUrl = `${new URL(request.url).origin}/reservation/time?${searchParams.toString()}`;
-  console.log("Redirecting to:", redirectUrl);
-
-  // Redirect to the time selection page with the selected date
-  return Response.redirect(redirectUrl, 302);
-}
-
+import { actions } from "astro:actions";
 // Définition des interfaces
 interface TimeSlot {
   time: string;
@@ -174,7 +138,7 @@ const capitalizeMonth = (month: string): string => {
 ---
 
 <ReservationLayout title="Réservation - Sélection de la date" currentStep={4}>
-  <form class="space-y-6" id="dateForm">
+  <form class="space-y-6">
     <!-- With Astro Actions, we don't need to pass these as hidden inputs, they'll be handled server-side -->
 
     <div>
@@ -284,12 +248,12 @@ const capitalizeMonth = (month: string): string => {
                     >
                       <input
                         type="radio"
-                        name="selectedDate"
+                        name="date"
                         value={date.date}
                         class="date-radio sr-only"
                         required
-                        data-date={date.date}
                       />
+
                       <div class="date-content h-full transition-all duration-200">
                         <div class="date-header p-4 text-center bg-white flex flex-col items-center justify-center h-full">
                           <div class="text-xs text-gray-500 capitalize mb-1">
@@ -311,6 +275,7 @@ const capitalizeMonth = (month: string): string => {
     <div
       class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between"
     >
+      <!-- Boutton de retour -->
       <a
         href={`/reservation/duration`}
         class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
@@ -427,7 +392,7 @@ const capitalizeMonth = (month: string): string => {
 
     // Handle date card selection
     dateCards.forEach((card) => {
-      card.addEventListener("click", () => {
+      card.addEventListener("click", async () => {
         const radio = card.querySelector(".date-radio");
         if (radio instanceof HTMLInputElement) {
           // Set radio as checked
@@ -436,78 +401,17 @@ const capitalizeMonth = (month: string): string => {
           // Highlight selected card and enable button
           highlightSelectedCard(card);
           enableContinueButton();
-
-          // Store in sessionStorage
-          sessionStorage.setItem("reservation_selectedDate", radio.value);
-          console.log("Date selected and stored:", radio.value);
         }
       });
     });
 
     // Check for preselected date
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlDate = urlParams.get("selectedDate");
-    const savedDate =
-      urlDate || sessionStorage.getItem("reservation_selectedDate");
-
-    if (savedDate) {
-      console.log("Attempting to preselect date:", savedDate);
-      const radioToSelect = document.querySelector(
-        `.date-radio[value="${savedDate}"]`
-      );
-      if (radioToSelect instanceof HTMLInputElement) {
-        radioToSelect.checked = true;
-        const card = radioToSelect.closest(".date-card");
-
-        // Highlight card and enable button
-        if (card) highlightSelectedCard(card);
-        enableContinueButton();
-
-        // Show the correct month
-        const monthSection = radioToSelect.closest(".month-section");
-        if (monthSection) {
-          const selectedMonth = monthSection.getAttribute("data-month");
-          if (selectedMonth) {
-            // Update dropdown display
-            const currentMonthDisplay = document.getElementById(
-              "currentMonthDisplay"
-            );
-            if (currentMonthDisplay) {
-              currentMonthDisplay.textContent =
-                selectedMonth.charAt(0).toUpperCase() + selectedMonth.slice(1);
-            }
-
-            // Show selected month section
-            const monthSections = document.querySelectorAll(".month-section");
-            monthSections.forEach((section) => {
-              if (section instanceof HTMLElement) {
-                section.style.display =
-                  section === monthSection ? "block" : "none";
-              }
-            });
-          }
-        }
-
-        console.log("Date preselected successfully:", savedDate);
-      } else {
-        console.log(
-          "Corresponding radio button not found for date:",
-          savedDate
-        );
-      }
-    }
-
-    // Handle form submission
     const form = document.querySelector("form");
-    if (form instanceof HTMLFormElement) {
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const formData = new FormData(form);
-        console.log("Form submitted with data:", formData);
-
-        // const { error } = await actions.date(formData);
-        // if (!error) navigate("/reservation/duration");
-      });
-    }
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const { error } = await actions.savedDate(formData);
+      if (!error) navigate("/reservation/time");
+    });
   });
 </script>

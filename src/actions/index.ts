@@ -1,5 +1,5 @@
 import { defineAction } from 'astro:actions';
-import { date, string, z } from 'astro:schema';
+import { string, z } from 'astro:schema';
 
 export const server = {
   numberOfPeople: defineAction({ 
@@ -28,13 +28,13 @@ export const server = {
       context.session.set('duration', input.duration);
     }
   }),
-  // date: defineAction({
-  //   accept: "form",
-  //   input: z.object({
-  //     date: string()
-  //   }),
-  //   handler: async (input, context) => {
-  //     context.session.set('date', input.date);
-  //   }
-  // }),
+  savedDate: defineAction({
+    accept: "form",
+    input: z.object({
+      date: z.string()
+    }),
+    handler: async (input, context) => {
+      context.session.set('date', input.date);
+    }
+  }),
 }

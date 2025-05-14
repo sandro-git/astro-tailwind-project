@@ -8,10 +8,8 @@ const showOnlyVR = numberOfPeople > 4;
 ---
 
 <ReservationLayout title="Réservation - Type de VR" currentStep={2}>
-  <form class="space-y-6" id="vrTypeForm">
+  <form class="space-y-6">
     <!-- Pass along the previous step's data -->
-    <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
-
     <div>
       <h2 class="text-2xl font-bold text-gray-900 mb-4">
         Choisissez votre type de VR
