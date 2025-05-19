@@ -7,18 +7,20 @@ import {
   isSameMonth,
   eachDayOfInterval,
   getDay,
-  isBefore,
   addDays,
   isWithinInterval,
   compareAsc,
   parse,
-  isThisMonth,
   isToday,
   parseISO,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { actions } from "astro:actions";
 // Définition des interfaces
+
+const numberOfPeople = await Astro.session.get("numberOfPeople");
+const typeOfVr = await Astro.session.get("typeOfVr");
+const duration = await Astro.session.get("duration");
+
 interface TimeSlot {
   time: string;
   available: boolean;
@@ -143,275 +145,284 @@ const capitalizeMonth = (month: string): string => {
 
     <div>
       <h2 class="text-2xl font-bold text-gray-900 mb-4">Choisissez une date</h2>
-      <p class="text-gray-600 mb-6">
-        Sélectionnez la date de votre réservation
-      </p>
+      <div class="grid grid-cols-1 grid-rows-2">
+        <p class="text-gray-600 mb-2 text-right">
+          Vous avez choisi {numberOfPeople} personnes pour {typeOfVr} pour{" "}
+          {duration} minutes.
+        </p>
+        <p class="text-gray-600 mb-2">
+          Sélectionnez une date pour votre réservation.
+        </p>
 
-      <!-- Month selector dropdown -->
-      <div class="month-selector mb-6">
-        <div class="mb-3 relative">
-          <button
-            type="button"
-            id="monthDropdownButton"
-            class="w-full md:w-64 flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-lg font-medium text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <span id="currentMonthDisplay">
-              {
-                capitalizeMonth(
-                  format(new globalThis.Date(), "MMMM", { locale: fr })
-                )
-              }
-            </span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 text-gray-500"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+        <!-- Month selector dropdown -->
+        <div class="month-selector mb-6">
+          <div class="mb-3 relative">
+            <button
+              type="button"
+              id="monthDropdownButton"
+              class="w-full md:w-64 flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-lg font-medium text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <path
-                fill-rule="evenodd"
-                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                clip-rule="evenodd"></path>
-            </svg>
-          </button>
+              <span id="currentMonthDisplay">
+                {
+                  capitalizeMonth(
+                    format(new globalThis.Date(), "MMMM", { locale: fr })
+                  )
+                }
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-gray-500"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clip-rule="evenodd"></path>
+              </svg>
+            </button>
 
-          {/* Dropdown panel (hidden by default) */}
-          <div
-            id="monthDropdownPanel"
-            class="mt-2 w-full md:w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto absolute"
-            style="display: none;"
-          >
-            <div class="p-2 grid grid-cols-1 gap-1">
-              {
-                availableMonths.map((month) => {
-                  // Déterminer si ce mois est le mois courant
-                  const isCurrentMonth = isSameMonth(
-                    month.date,
-                    new globalThis.Date()
-                  );
+            {/* Dropdown panel (hidden by default) */}
+            <div
+              id="monthDropdownPanel"
+              class="mt-2 w-full md:w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto absolute"
+              style="display: none;"
+            >
+              <div class="p-2 grid grid-cols-1 gap-1">
+                {
+                  availableMonths.map((month) => {
+                    // Déterminer si ce mois est le mois courant
+                    const isCurrentMonth = isSameMonth(
+                      month.date,
+                      new globalThis.Date()
+                    );
 
-                  // Formater l'année pour l'affichage
-                  const displayYear = format(month.date, "yyyy");
+                    // Formater l'année pour l'affichage
+                    const displayYear = format(month.date, "yyyy");
 
-                  return (
-                    <button
-                      type="button"
-                      class={`month-button py-2 px-4 rounded-md text-left transition-all w-full ${
-                        isCurrentMonth
-                          ? "bg-blue-100 text-blue-700 font-bold"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                      data-month={month.name}
-                    >
-                      {capitalizeMonth(month.name)} {displayYear}
-                    </button>
-                  );
-                })
-              }
+                    return (
+                      <button
+                        type="button"
+                        class={`month-button py-2 px-4 rounded-md text-left transition-all w-full ${
+                          isCurrentMonth
+                            ? "bg-blue-100 text-blue-700 font-bold"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                        data-month={month.name}
+                      >
+                        {capitalizeMonth(month.name)} {displayYear}
+                      </button>
+                    );
+                  })
+                }
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <!-- Day selector -->
-      <div class="calendar-container">
-        {
-          availableMonths.map(({ name: month }) => {
-            // Récupérer les dates pour ce mois
-            const dates = datesByMonth[month];
+        <!-- Day selector -->
+        <div class="calendar-container">
+          {
+            availableMonths.map(({ name: month }) => {
+              // Récupérer les dates pour ce mois
+              const dates = datesByMonth[month];
 
-            // Trier les dates en utilisant date-fns
-            const sortedDates = [...dates].sort((a, b) =>
-              compareAsc(parseISO(a.date), parseISO(b.date))
-            );
+              // Trier les dates en utilisant date-fns
+              const sortedDates = [...dates].sort((a, b) =>
+                compareAsc(parseISO(a.date), parseISO(b.date))
+              );
 
-            // Déterminer si c'est le mois actuel
-            const isCurrentMonth = isSameMonth(
-              parse(month, "MMMM", new globalThis.Date(), { locale: fr }),
-              new globalThis.Date()
-            );
+              // Déterminer si c'est le mois actuel
+              const isCurrentMonth = isSameMonth(
+                parse(month, "MMMM", new globalThis.Date(), { locale: fr }),
+                new globalThis.Date()
+              );
 
-            return (
-              <div
-                class={`month-section pb-6 transition-all duration-300 ease-in-out ${isCurrentMonth ? "" : "hidden"}`}
-                data-month={month}
-                style={`display: ${isCurrentMonth ? "block" : "none"};`}
-              >
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                  {sortedDates.map((date) => (
-                    // Ajouter des classes conditionnelles pour aujourd'hui ou prochains jours
-                    <label
-                      class="date-card border rounded-lg overflow-hidden cursor-pointer hover:border-blue-400 hover:shadow-sm transition-all duration-200"
-                      data-is-today={
-                        isToday(parseISO(date.date)) ? "true" : "false"
-                      }
-                      data-is-soon={date.isSoon ? "true" : "false"}
-                    >
-                      <input
-                        type="radio"
-                        name="date"
-                        value={date.date}
-                        class="date-radio sr-only"
-                        required
-                      />
+              return (
+                <div
+                  class={`month-section pb-6 transition-all duration-300 ease-in-out ${isCurrentMonth ? "" : "hidden"}`}
+                  data-month={month}
+                  style={`display: ${isCurrentMonth ? "block" : "none"};`}
+                >
+                  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    {sortedDates.map((date) => (
+                      // Ajouter des classes conditionnelles pour aujourd'hui ou prochains jours
+                      <label
+                        class="date-card border rounded-lg overflow-hidden cursor-pointer hover:border-blue-400 hover:shadow-sm transition-all duration-200"
+                        data-is-today={
+                          isToday(parseISO(date.date)) ? "true" : "false"
+                        }
+                        data-is-soon={date.isSoon ? "true" : "false"}
+                      >
+                        <input
+                          type="radio"
+                          name="date"
+                          value={date.date}
+                          class="date-radio sr-only"
+                          required
+                        />
 
-                      <div class="date-content h-full transition-all duration-200">
-                        <div class="date-header p-4 text-center bg-white flex flex-col items-center justify-center h-full">
-                          <div class="text-xs text-gray-500 capitalize mb-1">
-                            {date.dayName}
+                        <div class="date-content h-full transition-all duration-200">
+                          <div class="date-header p-4 text-center bg-white flex flex-col items-center justify-center h-full">
+                            <div class="text-xs text-gray-500 capitalize mb-1">
+                              {date.dayName}
+                            </div>
+                            <div class="text-xl font-bold">
+                              {date.dayNumber}
+                            </div>
                           </div>
-                          <div class="text-xl font-bold">{date.dayNumber}</div>
                         </div>
-                      </div>
-                    </label>
-                  ))}
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        }
+              );
+            })
+          }
+        </div>
       </div>
-    </div>
 
-    <div
-      class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between"
-    >
-      <!-- Boutton de retour -->
-      <a
-        href={`/reservation/duration`}
-        class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+      <div
+        class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between"
       >
-        ← Retour
-      </a>
-      <button
-        type="submit"
-        id="continueButton"
-        disabled
-        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors opacity-50 cursor-not-allowed"
-      >
-        Continuer →
-      </button>
+        <!-- Boutton de retour -->
+        <a
+          href={`/reservation/duration`}
+          class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+        >
+          ← Retour
+        </a>
+        <button
+          type="submit"
+          id="continueButton"
+          disabled
+          class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors opacity-50 cursor-not-allowed"
+        >
+          Continuer →
+        </button>
+      </div>
     </div>
   </form>
-</ReservationLayout>
 
-<script>
-  import { actions } from "astro:actions";
-  import { navigate } from "astro:transitions/client";
+  <script>
+    import { actions } from "astro:actions";
+    import { navigate } from "astro:transitions/client";
 
-  // Add a pure JavaScript click handler that doesn't rely on Astro's hydration
-  document.addEventListener("DOMContentLoaded", function () {
-    // DOM elements
-    const dateForm = document.getElementById("dateForm");
-    const continueButton = document.getElementById("continueButton");
-    const dateCards = document.querySelectorAll(".date-card");
-    const dropdownButton = document.getElementById("monthDropdownButton");
-    const dropdownPanel = document.getElementById("monthDropdownPanel");
+    // Add a pure JavaScript click handler that doesn't rely on Astro's hydration
+    document.addEventListener("DOMContentLoaded", function () {
+      // DOM elements
+      const dateForm = document.getElementById("dateForm");
+      const continueButton = document.getElementById("continueButton");
+      const dateCards = document.querySelectorAll(".date-card");
+      const dropdownButton = document.getElementById("monthDropdownButton");
+      const dropdownPanel = document.getElementById("monthDropdownPanel");
 
-    // Helper function to enable continue button
-    const enableContinueButton = () => {
-      if (continueButton instanceof HTMLButtonElement) {
-        continueButton.disabled = false;
-        continueButton.classList.remove("opacity-50", "cursor-not-allowed");
-      }
-    };
-
-    // Helper function to highlight selected card
-    const highlightSelectedCard = (selectedCard) => {
-      // Reset all cards
-      dateCards.forEach((card) => {
-        card.classList.remove("ring-2", "ring-blue-500");
-      });
-
-      // Highlight selected card
-      if (selectedCard) {
-        selectedCard.classList.add("ring-2", "ring-blue-500");
-      }
-    };
-
-    // Initialize dropdown
-    if (dropdownButton && dropdownPanel) {
-      // Toggle dropdown on button click
-      dropdownButton.onclick = function (e) {
-        e.preventDefault();
-        dropdownPanel.style.display =
-          dropdownPanel.style.display === "block" ? "none" : "block";
+      // Helper function to enable continue button
+      const enableContinueButton = () => {
+        if (continueButton instanceof HTMLButtonElement) {
+          continueButton.disabled = false;
+          continueButton.classList.remove("opacity-50", "cursor-not-allowed");
+        }
       };
 
-      // Set up month buttons
-      const monthButtons = document.querySelectorAll(".month-button");
-      monthButtons.forEach((btn) => {
-        if (btn instanceof HTMLElement) {
-          btn.onclick = function (e) {
-            e.stopPropagation();
-            if (this instanceof HTMLElement) {
-              const month = this.getAttribute("data-month");
-              console.log("Selected month:", month);
+      // Helper function to highlight selected card
+      const highlightSelectedCard = (selectedCard) => {
+        // Reset all cards
+        dateCards.forEach((card) => {
+          card.classList.remove("ring-2", "ring-blue-500");
+        });
 
-              // Update button text
-              const currentMonthDisplay = document.getElementById(
-                "currentMonthDisplay"
-              );
-              if (currentMonthDisplay && month) {
-                currentMonthDisplay.textContent =
-                  month.charAt(0).toUpperCase() + month.slice(1);
-              }
+        // Highlight selected card
+        if (selectedCard) {
+          selectedCard.classList.add("ring-2", "ring-blue-500");
+        }
+      };
 
-              // Show the corresponding month section and hide others
-              const monthSections = document.querySelectorAll(".month-section");
-              monthSections.forEach((section) => {
-                if (section instanceof HTMLElement) {
-                  const sectionMonth = section.getAttribute("data-month");
-                  section.style.display =
-                    sectionMonth === month ? "block" : "none";
+      // Initialize dropdown
+      if (dropdownButton && dropdownPanel) {
+        // Toggle dropdown on button click
+        dropdownButton.onclick = function (e) {
+          e.preventDefault();
+          dropdownPanel.style.display =
+            dropdownPanel.style.display === "block" ? "none" : "block";
+        };
+
+        // Set up month buttons
+        const monthButtons = document.querySelectorAll(".month-button");
+        monthButtons.forEach((btn) => {
+          if (btn instanceof HTMLElement) {
+            btn.onclick = function (e) {
+              e.stopPropagation();
+              if (this instanceof HTMLElement) {
+                const month = this.getAttribute("data-month");
+                console.log("Selected month:", month);
+
+                // Update button text
+                const currentMonthDisplay = document.getElementById(
+                  "currentMonthDisplay"
+                );
+                if (currentMonthDisplay && month) {
+                  currentMonthDisplay.textContent =
+                    month.charAt(0).toUpperCase() + month.slice(1);
                 }
-              });
 
-              // Hide dropdown
-              if (dropdownPanel) dropdownPanel.style.display = "none";
-            }
-          };
-        }
+                // Show the corresponding month section and hide others
+                const monthSections =
+                  document.querySelectorAll(".month-section");
+                monthSections.forEach((section) => {
+                  if (section instanceof HTMLElement) {
+                    const sectionMonth = section.getAttribute("data-month");
+                    section.style.display =
+                      sectionMonth === month ? "block" : "none";
+                  }
+                });
+
+                // Hide dropdown
+                if (dropdownPanel) dropdownPanel.style.display = "none";
+              }
+            };
+          }
+        });
+
+        // Close dropdown when clicking outside
+        document.body.addEventListener("click", function (e) {
+          const target = e.target;
+          if (
+            target instanceof Node &&
+            dropdownButton &&
+            dropdownPanel &&
+            target !== dropdownButton &&
+            !dropdownButton.contains(target) &&
+            !dropdownPanel.contains(target) &&
+            dropdownPanel.style.display === "block"
+          ) {
+            dropdownPanel.style.display = "none";
+          }
+        });
+      }
+
+      // Handle date card selection
+      dateCards.forEach((card) => {
+        card.addEventListener("click", async () => {
+          const radio = card.querySelector(".date-radio");
+          if (radio instanceof HTMLInputElement) {
+            // Set radio as checked
+            radio.checked = true;
+
+            // Highlight selected card and enable button
+            highlightSelectedCard(card);
+            enableContinueButton();
+          }
+        });
       });
 
-      // Close dropdown when clicking outside
-      document.body.addEventListener("click", function (e) {
-        const target = e.target;
-        if (
-          target instanceof Node &&
-          dropdownButton &&
-          dropdownPanel &&
-          target !== dropdownButton &&
-          !dropdownButton.contains(target) &&
-          !dropdownPanel.contains(target) &&
-          dropdownPanel.style.display === "block"
-        ) {
-          dropdownPanel.style.display = "none";
-        }
-      });
-    }
-
-    // Handle date card selection
-    dateCards.forEach((card) => {
-      card.addEventListener("click", async () => {
-        const radio = card.querySelector(".date-radio");
-        if (radio instanceof HTMLInputElement) {
-          // Set radio as checked
-          radio.checked = true;
-
-          // Highlight selected card and enable button
-          highlightSelectedCard(card);
-          enableContinueButton();
-        }
+      // Check for preselected date
+      const form = document.querySelector("form");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const { error } = await actions.savedDate(formData);
+        if (!error) navigate("/reservation/time");
       });
     });
-
-    // Check for preselected date
-    const form = document.querySelector("form");
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const formData = new FormData(form);
-      const { error } = await actions.savedDate(formData);
-      if (!error) navigate("/reservation/time");
-    });
-  });
-</script>
+  </script>
+</ReservationLayout>

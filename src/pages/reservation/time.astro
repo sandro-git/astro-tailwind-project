@@ -1,242 +1,94 @@
 ---
 import ReservationLayout from "../../layouts/ReservationLayout.astro";
 
-// Récupérer les paramètres
-const numberOfPeople = Astro.url.searchParams.get("numberOfPeople");
-const vrType = Astro.url.searchParams.get("vrType");
-const duration = Astro.url.searchParams.get("duration");
-const selectedDate = Astro.url.searchParams.get("selectedDate");
+import { parseISO, setHours, setMinutes, format } from "date-fns";
+import { fr } from "date-fns/locale";
 
-// Action pour le formulaire de sélection d'horaire utilisant l'API Astro
-export async function POST({ request }) {
-  const formData = await request.formData();
-  const selectedTime = formData.get("selectedTime");
+const numberOfPeople = await Astro.session.get("numberOfPeople");
+const typeOfVr = await Astro.session.get("typeOfVr");
+const duration = await Astro.session.get("duration");
+const selectedDate: string = await Astro.session.get("date");
 
-  // Valider qu'un horaire a été sélectionné
-  if (!selectedTime) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Aucun horaire sélectionné. Veuillez sélectionner un horaire.",
-      }),
-      {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+// Configuration
+const interval = parseInt(duration, 10);
+if (isNaN(interval) || (interval !== 30 && interval !== 60)) {
+  return [];
+} // 30 ou 60 minutes
+
+// Liste des créneaux indisponibles
+// const unavailableTimesSet = new Set(["15:30", "17:00", "18:30", "20:00"]);
+
+// Fonction pour générer les créneaux
+
+function generateTimeSlots(dateString: string, interval = 60) {
+  // Configuration de base
+  const startHour = 14;
+  const endHour = 22;
+  const now = new Date();
+  const unavailableTimesSet = new Set([]);
+  const slots: { value: string; label: string }[] = [];
+
+  // Sortie anticipée si pas de date
+  if (!dateString) {
+    return slots;
   }
 
-  // Récupérer toutes les données du formulaire
-  const params = new URLSearchParams();
+  // Parsing de la date sélectionnée
+  const selectedDate = parseISO(dateString);
 
-  // Ajouter les paramètres existants
-  for (const [key, value] of formData.entries()) {
-    params.set(key, value.toString());
-  }
+  // Créer une date pour aujourd'hui à minuit pour comparaison
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // Créer le datetime combiné (YYYY-MM-DDThh:mm)
-  if (selectedDate && selectedTime) {
-    const selectedDateTime = `${selectedDate}T${selectedTime}`;
-    params.set("selectedDateTime", selectedDateTime);
-  }
-
-  // Rediriger vers la page de contact
-  return Response.redirect(
-    `${new URL(request.url).origin}/reservation/contact?${params.toString()}`,
-    302
+  // Créer une date pour la date sélectionnée à minuit
+  const selectedMidnight = new Date(
+    selectedDate.getFullYear(),
+    selectedDate.getMonth(),
+    selectedDate.getDate()
   );
-}
 
-// Formatage de la date pour l'affichage
-let formattedDate = "";
-if (selectedDate) {
-  try {
-    // Créer directement une date à partir de la chaîne YYYY-MM-DD
-    // Sans ajouter de jour supplémentaire car date.astro génère maintenant correctement les dates
-    const [year, month, day] = selectedDate
-      .split("-")
-      .map((num) => parseInt(num, 10));
+  // Vérifier le type de date (aujourd'hui, passée, future)
+  const isToday = selectedMidnight.getTime() === today.getTime();
+  const isPastDate = selectedMidnight.getTime() < today.getTime();
 
-    // Créer la date sans ajustement
-    const adjustedDate = new Date(year, month - 1, day);
-
-    const options = {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    } as Intl.DateTimeFormatOptions;
-
-    formattedDate = adjustedDate.toLocaleDateString("fr-FR", options);
-    console.log(
-      "Original date:",
-      selectedDate,
-      "Adjusted date:",
-      adjustedDate.toISOString().split("T")[0]
-    );
-  } catch (error) {
-    console.error("Erreur lors du formatage de la date:", error);
+  // Pour les dates passées, ne pas afficher de créneaux
+  if (isPastDate) {
+    return slots;
   }
-}
 
-// Debugging
-console.log("Server-side values:");
-console.log("- numberOfPeople:", numberOfPeople);
-console.log("- vrType:", vrType);
-console.log("- duration:", duration);
-console.log("- selectedDate:", selectedDate);
-console.log("- formattedDate:", formattedDate);
-
-// Simuler les créneaux disponibles en fonction de la durée choisie
-const timeSlots = [];
-const durationInMin = parseInt(duration || "30");
-
-// Heures d'ouverture: 14h-22h (selon les exigences mises à jour)
-// Si durée = 30min, proposer des créneaux toutes les 30min
-// Si durée = 60min, proposer des créneaux toutes les heures
-const startHour = 14;
-const endHour = 22;
-const interval = durationInMin;
-
-// Vérifier si la date sélectionnée est aujourd'hui
-// Avec le mode SSR, cette logique sera exécutée à chaque requête,
-// donc l'heure actuelle sera à jour à chaque fois que l'utilisateur charge la page
-let isToday = false;
-// Date du fuseau horaire local (plus précis pour comparer les dates)
-const now = new Date();
-const currentHour = now.getHours();
-const currentMinutes = now.getMinutes();
-
-// Format d'affichage de l'heure pour l'interface
-const formattedCurrentTime = `${currentHour}h${currentMinutes < 10 ? `0${currentMinutes}` : currentMinutes}`;
-
-// Récupérer la date du jour au format YYYY-MM-DD dans le fuseau horaire local
-const today = new Date();
-const localYear = today.getFullYear();
-const localMonth = String(today.getMonth() + 1).padStart(2, "0"); // getMonth() renvoie 0-11
-const localDay = String(today.getDate()).padStart(2, "0");
-const todayString = `${localYear}-${localMonth}-${localDay}`;
-
-console.log("Heure actuelle (SSR):", formattedCurrentTime);
-console.log("Date d'aujourd'hui (locale):", todayString);
-
-if (selectedDate) {
-  // Comparer les dates dans le fuseau horaire local
-  isToday = selectedDate === todayString;
-
-  console.log("Vérification si la date est aujourd'hui (SSR):", {
-    selectedDate,
-    todayString,
-    isToday,
-    currentHour,
-    currentMinutes,
-  });
-}
-
-// Vérifiez si la date est un jour futur (après aujourd'hui)
-const isDateAfterToday = selectedDate ? selectedDate > todayString : false;
-console.log("Vérification si date future:", {
-  selectedDate,
-  todayString,
-  isDateAfterToday,
-});
-
-// On a déjà initialisé timeSlots plus haut, donc on le vide simplement ici
-timeSlots.length = 0;
-
-// Si c'est une date future, ne pas générer de créneaux du tout
-if (isDateAfterToday) {
-  console.log(
-    "Date future sélectionnée, aucun créneau affiché intentionnellement"
-  );
-}
-// Sinon, si c'est aujourd'hui, seulement afficher les créneaux qui n'ont pas encore dépassé
-else if (isToday) {
-  console.log("Aujourd'hui sélectionné, filtrage des créneaux passés");
-
-  // Générer des créneaux en fonction de la durée
+  // MODIFICATION : Générer des créneaux pour aujourd'hui ET les dates futures
+  // Générer tous les créneaux possibles
   for (let hour = startHour; hour < endHour; hour++) {
-    // Pour la durée de 30min, on ajoute 2 créneaux par heure
-    if (interval === 30) {
-      // Pour les créneaux à l'heure pile (XX:00)
-      let shouldShowHourSlot = true;
+    for (let minute = 0; minute < 60; minute += interval) {
+      // Création d'une date pour ce créneau
+      const currentDate = new Date();
+      const slotTime = setMinutes(setHours(currentDate, hour), minute);
 
-      // Si l'heure est déjà passée, ne pas afficher
-      if (hour < currentHour) {
-        shouldShowHourSlot = false;
-      } else if (hour === currentHour && currentMinutes > 0) {
-        shouldShowHourSlot = false;
+      // Vérifier si le créneau est déjà passé (seulement pour aujourd'hui)
+      if (isToday && slotTime <= now) {
+        continue;
       }
 
-      if (shouldShowHourSlot) {
-        timeSlots.push({
-          value: `${hour}:00`,
-          label: `${hour}:00`,
-        });
-      }
+      const formattedValue = format(slotTime, "H:mm");
 
-      // Pour les créneaux à la demi-heure (XX:30)
-      let shouldShowHalfHourSlot = true;
-
-      // Si la demi-heure est déjà passée, ne pas afficher
-      if (hour < currentHour) {
-        shouldShowHalfHourSlot = false;
-      } else if (hour === currentHour && currentMinutes >= 30) {
-        shouldShowHalfHourSlot = false;
-      }
-
-      if (shouldShowHalfHourSlot) {
-        timeSlots.push({
-          value: `${hour}:30`,
-          label: `${hour}:30`,
-        });
-      }
-    }
-    // Pour la durée de 60min, on ajoute 1 créneau par heure
-    else if (interval === 60) {
-      let shouldShowHourSlot = true;
-
-      // Si l'heure est déjà passée, ne pas afficher
-      if (hour < currentHour) {
-        shouldShowHourSlot = false;
-      } else if (hour === currentHour && currentMinutes > 0) {
-        shouldShowHourSlot = false;
-      }
-
-      if (shouldShowHourSlot) {
-        timeSlots.push({
-          value: `${hour}:00`,
-          label: `${hour}:00`,
+      // Ajouter le créneau s'il est disponible
+      if (!unavailableTimesSet.has(formattedValue)) {
+        slots.push({
+          value: formattedValue,
+          label: formattedValue,
         });
       }
     }
   }
-}
-// Pour les dates passées, ne pas afficher de créneaux
-else {
-  console.log("Date passée ou invalide, aucun créneau affiché");
+
+  return slots;
 }
 
-// Simuler la non-disponibilité de certains créneaux
-// Dans une vraie application, ces données viendraient de la base de données
-const unavailableTimesSet = new Set(["15:30", "17:00", "18:30", "20:00"]);
-
-// Filtrer les créneaux disponibles
-const availableTimeSlots = timeSlots.filter(
-  (slot) => !unavailableTimesSet.has(slot.value)
-);
+// Générer les créneaux disponibles
+const availableTimeSlots = generateTimeSlots(selectedDate, interval);
 ---
 
 <ReservationLayout title="Réservation - Horaires" currentStep={5}>
-  <form method="post" class="space-y-6" id="timeForm">
-    <!-- Transmettre les données des étapes précédentes -->
-    <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
-    <input type="hidden" name="vrType" value={vrType} />
-    <input type="hidden" name="duration" value={duration} />
-    <input type="hidden" name="selectedDate" value={selectedDate} />
-
+  <form id="timeForm">
     <div>
       <h2 class="text-2xl font-bold text-gray-900 mb-4">
         Choisissez un horaire
@@ -246,390 +98,94 @@ const availableTimeSlots = timeSlots.filter(
           <h3 class="text-lg font-medium text-gray-800">
             Récapitulatif de votre réservation
           </h3>
-          <span
-            class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full"
-            >Rendu dynamique SSR</span
-          >
+          <p class="text-gray-600">
+            Pour {numberOfPeople} personnes {typeOfVr} pour {duration} minutes le
+            {format(selectedDate, "EEEE d MMMM", { locale: fr })}
+          </p>
         </div>
-        {
-          formattedDate ? (
-            <p class="text-gray-600">
-              <span class="font-medium">Date:</span> {formattedDate}
-            </p>
-          ) : (
-            <p class="text-gray-600">
-              <span class="font-medium">Date:</span>{" "}
-              <span id="jsDate" class="italic text-gray-500">
-                Chargement...
-              </span>
-            </p>
-          )
-        }
-        <p class="text-gray-600">
-          <span class="font-medium">Type:</span>
-          <span id="jsVrType"
-            >{
-              vrType === "wired" || vrType === "VR_WIRED"
-                ? "VR filaire"
-                : vrType === "wireless" || vrType === "VR_WIRELESS"
-                  ? "VR sans fil"
-                  : "Chargement..."
-            }</span>
-        </p>
-        <p class="text-gray-600">
-          <span class="font-medium">Durée:</span>
-          <span id="jsDuration"
-            >{duration ? `${duration} minutes` : "Chargement..."}</span>
-        </p>
-        <p class="text-gray-600">
-          <span class="font-medium">Nombre de personnes:</span>
-          <span id="jsNumberOfPeople">{numberOfPeople || "Chargement..."}</span>
-        </p>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {
+            availableTimeSlots.map((timeSlot) => (
+              <label class="time-slot relative block">
+                <input
+                  type="radio"
+                  name="time"
+                  value={timeSlot.value}
+                  class="time-radio peer sr-only"
+                  required
+                />
+                <div class="h-16 flex items-center justify-center rounded-lg border-2 border-gray-300 bg-white text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+                  <span class="text-lg font-medium">{timeSlot.label}</span>
+                </div>
+              </label>
+            ))
+          }
+        </div>
       </div>
 
-      {
-        availableTimeSlots.length > 0 ? (
-          <>
-            {selectedDate && (
-              <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-                <div class="flex">
-                  <div class="flex-shrink-0">
-                    <svg
-                      class="h-5 w-5 text-blue-500"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div class="ml-3">
-                    {isToday ? (
-                      <p class="text-sm text-blue-700">
-                        Pour aujourd'hui ({todayString}), seuls les créneaux
-                        horaires à venir sont proposés. Heure actuelle :{" "}
-                        {formattedCurrentTime}.
-                        <br />
-                        <span class="text-xs italic">
-                          Cette information est mise à jour automatiquement
-                          grâce au mode SSR d'Astro.
-                        </span>
-                      </p>
-                    ) : isDateAfterToday ? (
-                      <p class="text-sm text-blue-700">
-                        Aucun créneau n'est disponible pour les jours à venir.
-                        Nous n'acceptons que les réservations pour aujourd'hui (
-                        {todayString}).
-                        <br />
-                        <span class="text-xs italic">
-                          Notre système de réservation ne permet pas de choisir
-                          un horaire pour les dates futures.
-                        </span>
-                      </p>
-                    ) : (
-                      <p class="text-sm text-blue-700">
-                        La date sélectionnée ({selectedDate}) est déjà passée.
-                        Veuillez sélectionner la date d'aujourd'hui (
-                        {todayString}) pour voir les créneaux disponibles.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {availableTimeSlots.map((timeSlot) => (
-                <label class="relative block">
-                  <input
-                    type="radio"
-                    name="selectedTime"
-                    value={timeSlot.value}
-                    class="peer sr-only"
-                    required
-                  />
-                  <div class="h-16 flex items-center justify-center rounded-lg border-2 border-gray-300 bg-white text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
-                    <span class="text-lg font-medium">{timeSlot.label}</span>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div class="bg-amber-50 border-l-4 border-amber-500 p-4">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <svg
-                  class="h-5 w-5 text-amber-500"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div class="ml-3">
-                <p class="text-sm text-amber-700">
-                  {isToday
-                    ? "Aucun créneau disponible pour aujourd'hui. Tous les créneaux sont passés ou complets."
-                    : isDateAfterToday
-                      ? `Nous n'acceptons pas les réservations pour les dates futures. Veuillez sélectionner la date d'aujourd'hui (${todayString}).`
-                      : `Cette date (${selectedDate}) est déjà passée. Veuillez sélectionner la date d'aujourd'hui (${todayString}) pour voir les créneaux disponibles.`}
-                </p>
-              </div>
-            </div>
-          </div>
-        )
-      }
-    </div>
-
-    <div
-      class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between"
-    >
-      <a
-        href={`/reservation/date?numberOfPeople=${numberOfPeople}&vrType=${vrType}&duration=${duration}`}
-        class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+      <div
+        class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between"
       >
-        ← Retour
-      </a>
-      <button
-        type="submit"
-        class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-        id="continueButton"
-      >
-        Continuer →
-      </button>
+        <!-- Boutton de retour -->
+        <a
+          href={`/reservation/duration`}
+          class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
+        >
+          ← Retour
+        </a>
+        <button
+          type="submit"
+          id="continueButton"
+          disabled
+          class="py-2.5 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors opacity-50 cursor-not-allowed"
+        >
+          Continuer →
+        </button>
+      </div>
     </div>
   </form>
 </ReservationLayout>
-
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    // Sélectionner le formulaire
-    const timeForm = document.getElementById("timeForm");
+  import { actions } from "astro:actions";
+  import { navigate } from "astro:transitions/client";
 
-    // Récupérer les boutons radio
-    const radioButtons = document.querySelectorAll(
-      'input[name="selectedTime"]'
-    );
-
-    console.log(
-      "Client-side: Page chargée avec",
-      radioButtons.length,
-      "créneaux disponibles"
-    );
-
-    // Afficher l'heure côté client et vérifier la cohérence avec le SSR
-    const now = new Date();
-    const clientHour = now.getHours();
-    const clientMinutes = now.getMinutes();
-    const clientTime = `${clientHour}h${clientMinutes < 10 ? `0${clientMinutes}` : clientMinutes}`;
-    console.log("Client-side time:", clientTime);
-
-    // Vérifier si le bouton Continuer doit être activé
+  document.addEventListener("DOMContentLoaded", function () {
+    // DOM elements
     const continueButton = document.getElementById("continueButton");
-    if (radioButtons.length === 0 && continueButton) {
+    const timeSlots = document.querySelectorAll(".time-slot");
+
+    // Helper function to enable continue button
+    const enableContinueButton = () => {
       if (continueButton instanceof HTMLButtonElement) {
-        continueButton.disabled = true;
-      }
-      continueButton.classList.add("opacity-50", "cursor-not-allowed");
-    }
-
-    // Ajouter un gestionnaire d'événement change à chaque bouton radio
-    radioButtons.forEach((radio) => {
-      radio.addEventListener("change", () => {
-        if (radio instanceof HTMLInputElement && radio.checked) {
-          // Stocker la valeur dans sessionStorage
-          sessionStorage.setItem("reservation_selectedTime", radio.value);
-          console.log("Horaire sélectionné:", radio.value);
-        }
-      });
-    });
-
-    // Vérifier s'il y a une valeur sauvegardée
-    const savedValue = sessionStorage.getItem("reservation_selectedTime");
-    if (savedValue) {
-      // Sélectionner le bouton radio correspondant
-      const radioToSelect = document.querySelector(
-        `input[name="selectedTime"][value="${savedValue}"]`
-      );
-      if (radioToSelect instanceof HTMLInputElement) {
-        radioToSelect.checked = true;
-      }
-    }
-
-    // Récupérer la date sélectionnée
-    const selectedDate =
-      new URLSearchParams(window.location.search).get("selectedDate") ||
-      sessionStorage.getItem("reservation_selectedDate");
-
-    // Récupérer la durée sélectionnée - en vérifiant d'abord les paramètres d'URL, puis sessionStorage
-    const duration =
-      new URLSearchParams(window.location.search).get("duration") ||
-      sessionStorage.getItem("reservation_duration");
-
-    console.log(
-      "Durée depuis sessionStorage:",
-      sessionStorage.getItem("reservation_duration")
-    );
-
-    // Log all values for debugging
-    console.log("DEBUG VALUES:", {
-      date: selectedDate,
-      duration: duration,
-      vrType:
-        new URLSearchParams(window.location.search).get("vrType") ||
-        sessionStorage.getItem("reservation_vrType"),
-      numberOfPeople:
-        new URLSearchParams(window.location.search).get("numberOfPeople") ||
-        sessionStorage.getItem("reservation_numberOfPeople"),
-      savedTime: savedValue,
-    });
-
-    // Update the summary details with client-side data
-    const updateSummaryDetails = () => {
-      // Format the date for display
-      const jsDateEl = document.getElementById("jsDate");
-      if (jsDateEl) {
-        // Get date from URL params or sessionStorage
-        const dateValue =
-          selectedDate || sessionStorage.getItem("reservation_selectedDate");
-
-        if (dateValue) {
-          try {
-            // Create date and adjust by adding one day to fix the timezone issue
-            // This ensures what the user selected in the calendar matches what they see here
-            const [year, month, day] = dateValue
-              .split("-")
-              .map((num) => parseInt(num, 10));
-
-            // Add one day to match what was displayed in the calendar
-            const adjustedDate = new Date(year, month - 1, day + 1);
-
-            const options = {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            } as Intl.DateTimeFormatOptions;
-            const formattedDate = adjustedDate.toLocaleDateString(
-              "fr-FR",
-              options
-            );
-            console.log(
-              "Client - Original date:",
-              dateValue,
-              "Adjusted date:",
-              adjustedDate.toISOString().split("T")[0]
-            );
-            jsDateEl.textContent = formattedDate;
-            jsDateEl.classList.remove("italic", "text-gray-500");
-          } catch (error) {
-            console.error("Error formatting date:", error);
-            jsDateEl.textContent = "Date non disponible";
-          }
-        } else {
-          jsDateEl.textContent = "Date non disponible";
-        }
-      }
-
-      // Update VR type
-      const vrType =
-        new URLSearchParams(window.location.search).get("vrType") ||
-        sessionStorage.getItem("reservation_vrType");
-      const jsVrTypeEl = document.getElementById("jsVrType");
-      if (jsVrTypeEl && vrType) {
-        if (vrType === "wired" || vrType === "VR_WIRED") {
-          jsVrTypeEl.textContent = "VR filaire";
-        } else if (vrType === "wireless" || vrType === "VR_WIRELESS") {
-          jsVrTypeEl.textContent = "VR sans fil";
-        } else {
-          jsVrTypeEl.textContent = vrType; // Fallback to display the raw value
-        }
-      }
-
-      // Update duration
-      const duration =
-        new URLSearchParams(window.location.search).get("duration") ||
-        sessionStorage.getItem("reservation_duration");
-      const jsDurationEl = document.getElementById("jsDuration");
-      if (jsDurationEl && duration) {
-        jsDurationEl.textContent = `${duration} minutes`;
-      }
-
-      // Update number of people
-      const numberOfPeople =
-        new URLSearchParams(window.location.search).get("numberOfPeople") ||
-        sessionStorage.getItem("reservation_numberOfPeople");
-      const jsNumberOfPeopleEl = document.getElementById("jsNumberOfPeople");
-      if (jsNumberOfPeopleEl && numberOfPeople) {
-        jsNumberOfPeopleEl.textContent = numberOfPeople;
+        continueButton.disabled = false;
+        continueButton.classList.remove("opacity-50", "cursor-not-allowed");
       }
     };
 
-    // Call the update function
-    updateSummaryDetails();
+    // Handle time slot selection
+    timeSlots.forEach((slot) => {
+      slot.addEventListener("click", async () => {
+        const radio = slot.querySelector(".time-radio");
+        if (radio instanceof HTMLInputElement) {
+          // Set radio as checked
+          radio.checked = true;
 
-    // Ajouter un gestionnaire d'événement pour la soumission du formulaire
-    if (timeForm instanceof HTMLFormElement) {
-      timeForm.addEventListener("submit", (e) => {
-        // Ne pas empêcher la soumission normale - Astro Actions s'en charge
+          // Enable continue button
+          enableContinueButton();
 
-        // Vérifier qu'un horaire est sélectionné
-        const selectedRadio = document.querySelector(
-          'input[name="selectedTime"]:checked'
-        );
-        if (!selectedRadio) {
-          e.preventDefault(); // Empêcher la soumission seulement si aucun horaire n'est sélectionné
-          alert("Veuillez sélectionner un horaire avant de continuer.");
-          return;
-        }
-
-        if (selectedRadio instanceof HTMLInputElement) {
-          const selectedTime = selectedRadio.value;
-
-          // Stocker la valeur dans sessionStorage pour référence côté client
-          sessionStorage.setItem("reservation_selectedTime", selectedTime);
-
-          // Sauvegarder toutes les valeurs dans sessionStorage
-          const params = new URLSearchParams(window.location.search);
-          if (params.get("vrType")) {
-            sessionStorage.setItem(
-              "reservation_vrType",
-              params.get("vrType") || ""
-            );
-          }
-          if (params.get("numberOfPeople")) {
-            sessionStorage.setItem(
-              "reservation_numberOfPeople",
-              params.get("numberOfPeople") || ""
-            );
-          }
-          if (params.get("duration")) {
-            sessionStorage.setItem(
-              "reservation_duration",
-              params.get("duration") || ""
-            );
-          }
-          if (params.get("selectedDate")) {
-            sessionStorage.setItem(
-              "reservation_selectedDate",
-              params.get("selectedDate") || ""
-            );
-          }
-
-          // Le reste sera géré par l'Astro Action
-          console.log("Formulaire soumis avec horaire:", selectedTime);
+          // No need for manual highlighting as we're using peer-checked classes in the HTML
         }
       });
-    }
+    });
+
+    // Handle form submission
+    const form = document.querySelector("form");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const { error } = await actions.saveTime(formData);
+      if (!error) navigate("/reservation/contact");
+    });
   });
 </script>

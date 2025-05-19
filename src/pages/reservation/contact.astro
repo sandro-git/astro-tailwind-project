@@ -1,124 +1,75 @@
 ---
-import ReservationLayout from '../../layouts/ReservationLayout.astro';
-
+import ReservationLayout from "../../layouts/ReservationLayout.astro";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 // Get query parameters from previous steps
-const numberOfPeople = Astro.url.searchParams.get('numberOfPeople');
-let vrType = Astro.url.searchParams.get('vrType');
-const duration = Astro.url.searchParams.get('duration');
-const selectedDateTime = Astro.url.searchParams.get('selectedDateTime');
-const selectedDate = Astro.url.searchParams.get('selectedDate');
-const selectedTime = Astro.url.searchParams.get('selectedTime');
-
-// Action pour le formulaire de contact utilisant l'API Astro
-export async function POST({ request }) {
-  const formData = await request.formData();
-  
-  // Valider les champs requis
-  const fullName = formData.get('fullName');
-  const email = formData.get('email');
-  const phoneNumber = formData.get('phoneNumber');
-  
-  // Validation simple
-  if (!fullName || !email || !phoneNumber) {
-    return new Response(JSON.stringify({
-      success: false,
-      message: 'Tous les champs sont obligatoires.',
-    }), {
-      status: 400,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-  
-  // Récupérer toutes les données du formulaire et construire l'URL
-  const params = new URLSearchParams();
-  for (const [key, value] of formData.entries()) {
-    params.set(key, value.toString());
-  }
-  
-  // Rediriger vers la page de résumé
-  return Response.redirect(`${new URL(request.url).origin}/reservation/summary?${params.toString()}`, 302);
-}
-
-// Force VR standard pour les groupes de plus de 4 personnes (côté serveur)
-const parsedNumberOfPeople = parseInt(numberOfPeople || '0');
-if (parsedNumberOfPeople > 4 && vrType === 'VR_WIRELESS') {
-  console.log('Contact page - correction serveur: forcage de VR standard pour groupe de', parsedNumberOfPeople, 'personnes');
-  vrType = 'VR';
-}
-
-// Format datetime for display
-let formattedDate = '';
-let formattedTime = '';
-
-console.log('Raw selectedDateTime from URL:', selectedDateTime);
-
-if (selectedDateTime) {
-  try {
-    const [datePart, timePart] = selectedDateTime.split('T');
-    
-    // We're already using the adjusted date from time.astro, so we don't need
-    // to add a day here again, just format it directly
-    const date = new Date(datePart);
-    
-    formattedDate = date.toLocaleDateString('fr-FR', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long',
-      year: 'numeric'
-    });
-    
-    formattedTime = timePart;
-    
-    console.log('Formatted date and time:', { selectedDateTime, datePart, formattedDate, formattedTime });
-  } catch (error) {
-    console.error('Error formatting date:', error);
-  }
-} else {
-  console.log('No selectedDateTime in URL, sessionStorage will be checked client-side');
-}
+const numberOfPeople = await Astro.session.get("numberOfPeople");
+const vrType = await Astro.session.get("vrType");
+const duration = await Astro.session.get("duration");
+const selectedDate = await Astro.session.get("date");
+const selectedTime = await Astro.session.get("time");
 ---
 
 <ReservationLayout title="Réservation - Vos coordonnées" currentStep={6}>
-  <form method="post" class="space-y-6" id="contactForm">
+  <form class="space-y-6">
     <!-- Pass along the previous steps' data -->
     <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
     <input type="hidden" name="vrType" value={vrType} />
     <input type="hidden" name="duration" value={duration} />
-    <input type="hidden" name="selectedDateTime" value={selectedDateTime} />
     <input type="hidden" name="selectedDate" value={selectedDate} />
     <input type="hidden" name="selectedTime" value={selectedTime} />
-    
+
     <div>
       <h2 class="text-2xl font-bold text-gray-900 mb-4">Vos coordonnées</h2>
-      <p class="text-gray-600 mb-6">Merci de renseigner vos informations de contact</p>
-      
-      <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6" id="reservation-info">
+      <p class="text-gray-600 mb-6">
+        Merci de renseigner vos informations de contact
+      </p>
+
+      <div
+        class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6"
+        id="reservation-info"
+      >
         <div class="flex">
           <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            <svg
+              class="h-5 w-5 text-blue-500"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clip-rule="evenodd"></path>
             </svg>
           </div>
           <div class="ml-3">
             <p class="text-sm text-blue-700">
-              Votre réservation : <span class="font-medium" id="numPeopleDisplay">{numberOfPeople} personne{numberOfPeople && parseInt(numberOfPeople) > 1 ? 's' : ''}</span> • 
-              <span class="font-medium" id="vrTypeDisplay">{
-  vrType === 'VR_WIRELESS' || vrType === 'wireless' ? 'VR Sans Fil' : 
-  vrType === 'VR_WIRED' || vrType === 'wired' || vrType === 'VR' ? 'VR Standard' : 
-  'Chargement...'
-}</span> • 
-              <span class="font-medium" id="durationDisplay">{duration} minutes</span> • 
-              <span class="font-medium" id="dateTimeDisplay">{formattedDate ? `${formattedDate} à ${formattedTime}` : 'Chargement de la date...'}</span>
+              Votre réservation : <span
+                class="font-medium"
+                id="numPeopleDisplay"
+                >{numberOfPeople} personne{
+                  numberOfPeople && parseInt(numberOfPeople) > 1 ? "s" : ""
+                }</span
+              > •
+              <span class="font-medium" id="vrTypeDisplay">{vrType}</span> •
+              <span class="font-medium" id="durationDisplay"
+                >{duration} minutes</span
+              > •
+              <span class="font-medium" id="dateTimeDisplay"
+                >{format(selectedDate, "EEEE d MMMM", { locale: fr })}</span
+              >
             </p>
           </div>
         </div>
       </div>
-      
+
       <div class="space-y-4">
         <div>
-          <label for="fullName" class="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            for="fullName"
+            class="block text-sm font-medium text-gray-700 mb-1"
+          >
             Nom et prénom *
           </label>
           <input
@@ -131,9 +82,12 @@ if (selectedDateTime) {
             autocomplete="name"
           />
         </div>
-        
+
         <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            for="email"
+            class="block text-sm font-medium text-gray-700 mb-1"
+          >
             Email *
           </label>
           <input
@@ -146,9 +100,12 @@ if (selectedDateTime) {
             autocomplete="email"
           />
         </div>
-        
+
         <div>
-          <label for="phoneNumber" class="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            for="phoneNumber"
+            class="block text-sm font-medium text-gray-700 mb-1"
+          >
             Numéro de téléphone *
           </label>
           <input
@@ -162,14 +119,18 @@ if (selectedDateTime) {
             autocomplete="tel"
             inputmode="numeric"
           />
-          <p class="mt-1 text-xs text-gray-500">Format: 10 chiffres sans espaces</p>
+          <p class="mt-1 text-xs text-gray-500">
+            Format: 10 chiffres sans espaces
+          </p>
         </div>
       </div>
     </div>
-    
-    <div class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
-      <a 
-        href={`/reservation/time?numberOfPeople=${numberOfPeople}&vrType=${vrType}&duration=${duration}`} 
+
+    <div
+      class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between"
+    >
+      <a
+        href={`/reservation/time?numberOfPeople=${numberOfPeople}&vrType=${vrType}&duration=${duration}`}
         class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
       >
         ← Retour
@@ -185,230 +146,18 @@ if (selectedDateTime) {
 </ReservationLayout>
 
 <script>
+  import { actions } from "astro:actions";
+  import { navigate } from "astro:transitions/client";
+  // DOM elements
   // Handle form data persistence
-  document.addEventListener('DOMContentLoaded', () => {
-    // Retrieve data from URL or sessionStorage
-    const params = new URLSearchParams(window.location.search);
-    const numberOfPeople = params.get('numberOfPeople') || sessionStorage.getItem('reservation_numberOfPeople');
-    let vrType = params.get('vrType') || sessionStorage.getItem('reservation_vrType');
-    const duration = params.get('duration') || sessionStorage.getItem('reservation_duration');
-    const selectedDateTime = params.get('selectedDateTime') || sessionStorage.getItem('reservation_selectedDateTime');
-    
-    // Force VR standard pour les groupes de plus de 4 personnes (côté client)
-    const numPeople = parseInt(numberOfPeople || '0');
-    if (numPeople > 4 && vrType === 'VR_WIRELESS') {
-      console.log('Contact page - correction client: forcage de VR standard pour groupe de', numPeople, 'personnes');
-      vrType = 'VR';
-      sessionStorage.setItem('reservation_vrType', 'VR');
-    }
-    
-    console.log('Contact page: données récupérées', { 
-      fromURL: { 
-        numberOfPeople: params.get('numberOfPeople'), 
-        vrType: params.get('vrType'),
-        duration: params.get('duration'),
-        selectedDateTime: params.get('selectedDateTime') 
-      },
-      fromSession: {
-        numberOfPeople: sessionStorage.getItem('reservation_numberOfPeople'),
-        vrType: sessionStorage.getItem('reservation_vrType'),
-        duration: sessionStorage.getItem('reservation_duration'),
-        selectedDateTime: sessionStorage.getItem('reservation_selectedDateTime')
-      },
-      final: { numberOfPeople, vrType, duration, selectedDateTime }
-    });
-    
-    // Update hidden inputs if we have the data
-    if (numberOfPeople) {
-      // Update hidden input if value comes from sessionStorage
-      if (!params.get('numberOfPeople')) {
-        const hiddenInput = document.querySelector('input[name="numberOfPeople"]');
-        if (hiddenInput instanceof HTMLInputElement) {
-          hiddenInput.value = numberOfPeople;
-        }
-      }
-      
-      // Always update display regardless of data source
-      const displayElement = document.getElementById('numPeopleDisplay');
-      if (displayElement) {
-        const pluralSuffix = parseInt(numberOfPeople) > 1 ? 's' : '';
-        displayElement.textContent = `${numberOfPeople} personne${pluralSuffix}`;
-        console.log('Updated numPeopleDisplay:', displayElement.textContent);
-      } else {
-        console.error('numPeopleDisplay element not found');
-      }
-    }
-    
-    if (vrType) {
-      // Update hidden input if value comes from sessionStorage
-      if (!params.get('vrType')) {
-        const hiddenInput = document.querySelector('input[name="vrType"]');
-        if (hiddenInput instanceof HTMLInputElement) {
-          hiddenInput.value = vrType;
-        }
-      }
-      
-      // Always update display regardless of data source
-      const displayElement = document.getElementById('vrTypeDisplay');
-      if (displayElement) {
-        // Forcer VR standard pour les groupes de plus de 4 personnes
-        const numPeople = parseInt(numberOfPeople || '0');
-        const correctedVrType = (numPeople > 4 && vrType === 'VR_WIRELESS') ? 'VR' : vrType;
-        
-        if (numPeople > 4 && vrType === 'VR_WIRELESS') {
-          console.log('Correction du type VR pour un groupe de plus de 4 personnes');
-          // Mettre à jour le hidden input aussi
-          const hiddenInput = document.querySelector('input[name="vrType"]');
-          if (hiddenInput instanceof HTMLInputElement) {
-            hiddenInput.value = 'VR';
-          }
-          // Mettre à jour sessionStorage
-          sessionStorage.setItem('reservation_vrType', 'VR');
-        }
-        
-        if (correctedVrType === 'VR_WIRELESS' || correctedVrType === 'wireless') {
-          displayElement.textContent = 'VR Sans Fil';
-        } else if (correctedVrType === 'VR_WIRED' || correctedVrType === 'wired' || correctedVrType === 'VR') {
-          displayElement.textContent = 'VR Standard';
-        } else {
-          displayElement.textContent = correctedVrType; // Fallback display
-        }
-        console.log('Updated vrTypeDisplay:', displayElement.textContent);
-      } else {
-        console.error('vrTypeDisplay element not found');
-      }
-    }
-    
-    // Mettre à jour l'affichage pour la durée
-    if (duration) {
-      // Update hidden input if value comes from sessionStorage
-      if (!params.get('duration')) {
-        const hiddenInput = document.querySelector('input[name="duration"]');
-        if (hiddenInput instanceof HTMLInputElement) {
-          hiddenInput.value = duration;
-        }
-      }
-      
-      // Always update display regardless of data source
-      const displayElement = document.getElementById('durationDisplay');
-      if (displayElement) {
-        displayElement.textContent = `${duration} minutes`;
-        console.log('Updated durationDisplay:', displayElement.textContent);
-      } else {
-        console.error('durationDisplay element not found');
-      }
-    }
-    
-    // Mettre à jour l'input caché et l'affichage pour selectedDateTime
-    const selectedDateTimeValue = selectedDateTime || sessionStorage.getItem('reservation_selectedDateTime');
-    
-    if (selectedDateTimeValue) {
-      // Mettre à jour l'input caché
-      const hiddenInput = document.querySelector('input[name="selectedDateTime"]');
-      if (hiddenInput instanceof HTMLInputElement) {
-        hiddenInput.value = selectedDateTimeValue;
-      }
-      
-      // Mettre à jour l'affichage avec le formatage côté client
-      const dateTimeDisplay = document.getElementById('dateTimeDisplay');
-      if (dateTimeDisplay) {
-        try {
-          console.log('Formatting date client-side:', selectedDateTimeValue);
-          const [datePart, timePart] = selectedDateTimeValue.split('T');
-          
-          // We're already using the adjusted date from time.astro, so we don't need
-          // to add a day here again, just format it directly
-          const date = new Date(datePart);
-          
-          const formattedDate = date.toLocaleDateString('fr-FR', { 
-            weekday: 'long', 
-            day: 'numeric', 
-            month: 'long',
-            year: 'numeric'
-          });
-          
-          console.log('Client-side formatted date:', formattedDate, 'time:', timePart);
-          dateTimeDisplay.textContent = `${formattedDate} à ${timePart}`;
-          
-          // Si la date vient du stockage de session, rafraîchir la page pour inclure la date dans l'URL
-          if (!params.get('selectedDateTime') && !window.location.search.includes('refreshed=true')) {
-            console.log('Refreshing page to include selectedDateTime in URL');
-            const currentParams = new URLSearchParams(window.location.search);
-            currentParams.set('selectedDateTime', selectedDateTimeValue);
-            currentParams.set('refreshed', 'true');
-            
-            // Ajout d'un petit délai pour s'assurer que l'utilisateur voit d'abord la date s'afficher
-            setTimeout(() => {
-              window.location.search = currentParams.toString();
-            }, 100);
-          }
-        } catch (error) {
-          console.error('Error formatting date client-side:', error);
-          dateTimeDisplay.textContent = 'Date non disponible';
-        }
-      } else {
-        console.error('dateTimeDisplay element not found');
-      }
-    } else {
-      console.error('Aucune date trouvée, ni dans l\'URL ni dans sessionStorage');
-      // Rediriger vers la page de sélection de date?
-      if (confirm('Aucune date sélectionnée. Voulez-vous retourner à la page de sélection de date?')) {
-        const redirectUrl = `/reservation/date?numberOfPeople=${numberOfPeople || ''}&vrType=${vrType || ''}`;
-        window.location.href = redirectUrl;
-      }
-    }
-    
-    // Store form values in sessionStorage
-    const formElements = document.querySelectorAll('input[name="fullName"], input[name="email"], input[name="phoneNumber"]');
-    formElements.forEach(input => {
-      if (input instanceof HTMLInputElement) {
-        // Load saved value if exists
-        const savedValue = sessionStorage.getItem(`reservation_${input.name}`);
-        if (savedValue) {
-          input.value = savedValue;
-        }
-        
-        // Save on input change
-        input.addEventListener('input', () => {
-          sessionStorage.setItem(`reservation_${input.name}`, input.value);
-        });
-      }
-    });
-    
+  document.addEventListener("DOMContentLoaded", function () {
     // Ajouter un gestionnaire pour le submit du formulaire
-    const contactForm = document.getElementById('contactForm');
-    if (contactForm instanceof HTMLFormElement) {
-      contactForm.addEventListener('submit', (e) => {
-        // Avec Astro Actions, nous pouvons laisser la soumission normale se faire
-        // Mais on vérifie quand même que les champs sont remplis
-        
-        // Vérifier tous les champs requis
-        const formInputs = contactForm.querySelectorAll('input[name="fullName"], input[name="email"], input[name="phoneNumber"]');
-        let allFieldsFilled = true;
-        
-        formInputs.forEach(input => {
-          if (input instanceof HTMLInputElement) {
-            if (!input.value.trim()) {
-              e.preventDefault(); // Empêcher la soumission si un champ est vide
-              allFieldsFilled = false;
-              input.classList.add('border-red-500');
-            } else {
-              input.classList.remove('border-red-500');
-              
-              // Sauvegarde dans sessionStorage pour référence côté client
-              console.log(`Sauvegarde de ${input.name} = ${input.value} dans sessionStorage`);
-              sessionStorage.setItem(`reservation_${input.name}`, input.value);
-            }
-          }
-        });
-        
-        if (!allFieldsFilled) {
-          alert('Veuillez remplir tous les champs obligatoires');
-          return;
-        }
-        
-        console.log('Formulaire soumis avec succès via Astro Actions');
-      });
-    }
+    const form = document.querySelector("form");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const { error } = await actions.contact(formData);
+      if (!error) navigate("/reservation/confirmation");
+    });
   });
 </script>
