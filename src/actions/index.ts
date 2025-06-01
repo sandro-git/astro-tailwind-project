@@ -2,6 +2,7 @@ import { defineAction } from 'astro:actions';
 import { z } from 'astro:schema';
 
 export const server = {
+  // Action to save the number of people
   numberOfPeople: defineAction({ 
     accept: "form",
     input: z.object({
@@ -11,6 +12,7 @@ export const server = {
       context.session.set('numberOfPeople', input.numberOfPeople);
     }
   }),
+  // Action to save the type of VR
   typeOfVr: defineAction({
     accept: "form",
     input: z.object({
@@ -19,6 +21,7 @@ export const server = {
       context.session.set('typeOfVr', input.typeOfVr);
     }
   }),
+  // Action to save the duration
   duration: defineAction({
     accept: "form",
     input: z.object({
@@ -28,6 +31,7 @@ export const server = {
       context.session.set('duration', input.duration);
     }
   }),
+  // Action to save the date
   savedDate: defineAction({
     accept: "form",
     input: z.object({
@@ -37,6 +41,7 @@ export const server = {
       context.session.set('date', input.date);
     }
   }),
+  // Action to save time
   saveTime: defineAction({
     accept: "form",
     input: z.object({
@@ -45,17 +50,18 @@ export const server = {
   handler: async (input, context) => {
     context.session.set("time", input.time);
   }}),
+  // Action to save contact information
   contact: defineAction({
     accept: "form", 
     input: z.object({
-      name: z.string(),
+      fullName: z.string(),
       email: z.string(),
-      phone: z.string()
+      phoneNumber: z.string()
     }),
     handler: async (input, context) => {
-      context.session.set('name', input.name);
+      context.session.set('fullName', input.fullName);
       context.session.set('email', input.email);
-      context.session.set('phone', input.phone);
+      context.session.set('phoneNumber', input.phoneNumber);
     }
   }),
 }

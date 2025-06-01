@@ -1,13 +1,16 @@
 ---
 import ReservationLayout from "../../layouts/ReservationLayout.astro";
-
+import { format } from "date-fns";
+import { el, fr } from "date-fns/locale";
 // Get query parameters from all previous steps
 const numberOfPeople = await Astro.session.get("numberOfPeople");
 const typeOfVr = await Astro.session.get("typeOfVr");
 const duration = await Astro.session.get("duration");
-const selectedDate: string = await Astro.session.get("date");
-
-// Format datetime for display
+const savedDate = await Astro.session.get("date");
+const savedTime = await Astro.session.get("time");
+const fullName = await Astro.session.get("fullName");
+const email = await Astro.session.get("email");
+const phoneNumber = await Astro.session.get("phoneNumber");
 
 // Generate a random reservation number (in a real app, this would come from the database)
 const reservationNumber =
@@ -19,6 +22,25 @@ const reservationNumber =
 // In a real app, this is where you would save the reservation to Astro DB
 // For now, we're just simulating a successful reservation
 const isSuccess = true;
+
+function calculateTotalPrice() {
+  const price30 = 18; // Price for 30 minutes
+  const price60 = 29; // Price for 60 minutes
+  const peopleCount = parseInt(numberOfPeople) || 1;
+  if (duration === "30") {
+    return (price30 * peopleCount).toFixed(2); // 50% discount for 30 minutes
+  } else if (duration === "60") {
+    if (peopleCount <= 2) {
+      return (price60 * peopleCount).toFixed(2);
+    } else if (peopleCount <= 4) {
+      return ((price60 - 2) * peopleCount).toFixed(2);
+    } else if (peopleCount <= 6) {
+      return ((price60 - 4) * peopleCount).toFixed(2);
+    }
+    return "error";
+  }
+}
+const prixTotal = calculateTotalPrice();
 ---
 
 <ReservationLayout title="Réservation - Confirmation" currentStep={8}>
@@ -89,11 +111,11 @@ const isSuccess = true;
 
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Date et heure</dt>
-                {/* <dd class="font-medium text-gray-900" id="dateTimeDisplay">
-                  {formattedDate && formattedTime
-                    ? `${formattedDate} à ${formattedTime}`
+                <dd class="font-medium text-gray-900" id="dateTimeDisplay">
+                  {savedDate && savedTime
+                    ? `Le ${format(savedDate, "EEEE d MMMM", { locale: fr })} à ${savedTime}`
                     : "Chargement..."}
-                </dd> */}
+                </dd>
               </div>
 
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
@@ -116,7 +138,7 @@ const isSuccess = true;
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Téléphone</dt>
                 <dd class="font-medium text-gray-900" id="phoneNumberDisplay">
-                  {phoneNumber || "Chargement..."}
+                  {phoneNumber}
                 </dd>
               </div>
 
@@ -128,7 +150,7 @@ const isSuccess = true;
                   class="text-lg font-semibold text-gray-900"
                   id="totalPriceDisplay"
                 >
-                  Calcul en cours...
+                  {prixTotal} €
                 </dd>
               </div>
             </div>
@@ -225,245 +247,4 @@ const isSuccess = true;
   </div>
 </ReservationLayout>
 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    // Récupérer les paramètres d'URL
-    const params = new URLSearchParams(window.location.search);
-
-    // Log des données pour debug
-    console.log("Confirmation - Paramètres URL:", {
-      numberOfPeople: params.get("numberOfPeople"),
-      vrType: params.get("vrType"),
-      duration: params.get("duration"),
-      selectedDateTime: params.get("selectedDateTime"),
-      fullName: params.get("fullName"),
-      email: params.get("email"),
-      phoneNumber: params.get("phoneNumber"),
-    });
-
-    console.log("Confirmation - Session Storage avant effacement:", {
-      numberOfPeople: sessionStorage.getItem("reservation_numberOfPeople"),
-      vrType: sessionStorage.getItem("reservation_vrType"),
-      duration: sessionStorage.getItem("reservation_duration"),
-      selectedDateTime: sessionStorage.getItem("reservation_selectedDateTime"),
-      fullName: sessionStorage.getItem("reservation_fullName"),
-      email: sessionStorage.getItem("reservation_email"),
-      phoneNumber: sessionStorage.getItem("reservation_phoneNumber"),
-    });
-
-    // Mettre à jour l'affichage avec les valeurs manquantes
-    const updateDisplayFromStorage = () => {
-      // Define types for better TypeScript support
-      interface FormField {
-        name: string;
-        displayId: string;
-        formatter: (
-          value: string,
-          allValues?: Record<string, string>
-        ) => string;
-      }
-
-      // Liste des champs et leurs éléments d'affichage
-      const fields: FormField[] = [
-        {
-          name: "numberOfPeople",
-          displayId: "numberOfPeopleDisplay",
-          formatter: (value: string) =>
-            `${value} personne${parseInt(value) > 1 ? "s" : ""}`,
-        },
-        {
-          name: "vrType",
-          displayId: "vrTypeDisplay",
-          formatter: (value: string) =>
-            value === "VR_WIRELESS" ? "VR Sans Fil" : "VR Standard",
-        },
-        {
-          name: "duration",
-          displayId: "durationDisplay",
-          formatter: (value: string) => `${value} minutes`,
-        },
-        {
-          name: "selectedDateTime",
-          displayId: "dateTimeDisplay",
-          formatter: (value: string) => {
-            try {
-              const [datePart, timePart] = value.split("T");
-              const date = new Date(datePart);
-              const formattedDate = date.toLocaleDateString("fr-FR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              });
-              return `${formattedDate} à ${timePart}`;
-            } catch (error) {
-              console.error("Error formatting date:", error);
-              return value;
-            }
-          },
-        },
-        {
-          name: "fullName",
-          displayId: "fullNameDisplay",
-          formatter: (value: string) => value,
-        },
-        {
-          name: "email",
-          displayId: "emailDisplay",
-          formatter: (value: string) => value,
-        },
-        {
-          name: "phoneNumber",
-          displayId: "phoneNumberDisplay",
-          formatter: (value: string) => value,
-        },
-        // Ajout d'un champ virtuel pour le prix total
-        {
-          name: "totalPrice",
-          displayId: "totalPriceDisplay",
-          formatter: (_: string, allValues?: Record<string, string>) => {
-            // Calculer le prix total en fonction du nombre de personnes
-            const numPeople = parseInt(allValues?.numberOfPeople || "0");
-
-            // Déterminer le prix par personne selon le nombre de personnes
-            let pricePerPerson;
-            if (numPeople <= 2) {
-              // Pour 1 ou 2 personnes
-              pricePerPerson = 29;
-            } else if (numPeople <= 4) {
-              // Pour 3 ou 4 personnes
-              pricePerPerson = 27;
-            } else {
-              // Pour 5 ou 6 personnes
-              pricePerPerson = 25;
-            }
-
-            const totalPrice = pricePerPerson * numPeople;
-            return `${totalPrice} €`;
-          },
-        },
-      ];
-
-      // Collecter toutes les valeurs d'abord pour pouvoir les utiliser pour des calculs
-      const allValues: Record<string, string> = {};
-
-      fields.forEach((field) => {
-        if (field.name === "totalPrice") return; // Ignorer le champ virtuel pour l'instant
-
-        // Récupérer la valeur depuis l'URL ou sessionStorage
-        const urlValue = params.get(field.name);
-        const storageKey =
-          field.name === "selectedDateTime"
-            ? "reservation_selectedDateTime"
-            : `reservation_${field.name}`;
-        const storedValue = sessionStorage.getItem(storageKey);
-
-        // Sauvegarder la valeur pour tous les formatters
-        allValues[field.name] = urlValue || storedValue || "";
-      });
-
-      // Maintenant, mettre à jour l'affichage avec toutes les valeurs disponibles
-      fields.forEach((field) => {
-        const displayElement = document.getElementById(field.displayId);
-        if (!displayElement) return;
-
-        if (field.name === "totalPrice") {
-          // Cas spécial pour le prix total qui est calculé
-          displayElement.textContent = field.formatter("", allValues);
-          return;
-        }
-
-        const urlValue = params.get(field.name);
-        if (urlValue) {
-          // Si la valeur est dans l'URL, l'utiliser
-          displayElement.textContent = field.formatter(urlValue, allValues);
-        } else {
-          // Sinon, essayer de récupérer depuis sessionStorage
-          const storageKey =
-            field.name === "selectedDateTime"
-              ? "reservation_selectedDateTime"
-              : `reservation_${field.name}`;
-          const storedValue = sessionStorage.getItem(storageKey);
-
-          if (storedValue) {
-            displayElement.textContent = field.formatter(
-              storedValue,
-              allValues
-            );
-            console.log(
-              `Valeur récupérée depuis sessionStorage pour ${field.name}:`,
-              storedValue
-            );
-          } else {
-            // Utilisez des valeurs de remplacement raisonnables au lieu de "Information non disponible"
-            switch (field.name) {
-              case "numberOfPeople":
-                displayElement.textContent = "2 personnes"; // Valeur par défaut
-                break;
-              case "vrType":
-                displayElement.textContent = "VR Standard"; // Valeur par défaut
-                break;
-              case "fullName":
-                displayElement.textContent = "Client";
-                break;
-              case "email":
-                displayElement.textContent = "client@example.com";
-                break;
-              case "phoneNumber":
-                displayElement.textContent = "0600000000";
-                break;
-              default:
-                displayElement.textContent = "Information manquante";
-            }
-
-            // Si on est en production, afficher en gris plutôt qu'en rouge
-            displayElement.classList.add("text-gray-500");
-            console.log(
-              `Aucune valeur trouvée pour ${field.name}, utilisation de la valeur par défaut`
-            );
-          }
-        }
-      });
-
-      // Mettre à jour l'email affiché dans le message de confirmation
-      const emailElement = document.getElementById("emailDisplay");
-      const confirmationEmailElement =
-        document.getElementById("confirmationEmail");
-      if (emailElement && confirmationEmailElement) {
-        const emailText = emailElement.textContent;
-        if (
-          emailText &&
-          emailText !== "Information non disponible" &&
-          emailText !== "Chargement..."
-        ) {
-          confirmationEmailElement.textContent = emailText;
-        }
-      }
-    };
-
-    // Mettre à jour l'affichage
-    updateDisplayFromStorage();
-
-    // Après avoir utilisé les données, effacer sessionStorage pour la prochaine réservation
-    const reservationKeys = [
-      "reservation_numberOfPeople",
-      "reservation_vrType",
-      "reservation_duration",
-      "reservation_selectedDate",
-      "reservation_selectedTime",
-      "reservation_selectedDateTime",
-      "reservation_dateTime", // Pour compatibilité
-      "reservation_fullName",
-      "reservation_email",
-      "reservation_phoneNumber",
-    ];
-
-    // Effacer après un délai pour s'assurer que l'affichage est mis à jour
-    setTimeout(() => {
-      reservationKeys.forEach((key) => {
-        sessionStorage.removeItem(key);
-      });
-      console.log("Session storage effacé après confirmation de réservation");
-    }, 2000);
-  });
-</script>
+<script></script>

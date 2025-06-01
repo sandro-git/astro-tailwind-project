@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 // Get query parameters from previous steps
 const numberOfPeople = await Astro.session.get("numberOfPeople");
-const vrType = await Astro.session.get("vrType");
+const typeOfVr = await Astro.session.get("typeOfVr");
 const duration = await Astro.session.get("duration");
 const selectedDate = await Astro.session.get("date");
 const selectedTime = await Astro.session.get("time");
@@ -14,7 +14,7 @@ const selectedTime = await Astro.session.get("time");
   <form class="space-y-6">
     <!-- Pass along the previous steps' data -->
     <input type="hidden" name="numberOfPeople" value={numberOfPeople} />
-    <input type="hidden" name="vrType" value={vrType} />
+    <input type="hidden" name="typeOfVr" value={typeOfVr} />
     <input type="hidden" name="duration" value={duration} />
     <input type="hidden" name="selectedDate" value={selectedDate} />
     <input type="hidden" name="selectedTime" value={selectedTime} />
@@ -52,7 +52,7 @@ const selectedTime = await Astro.session.get("time");
                   numberOfPeople && parseInt(numberOfPeople) > 1 ? "s" : ""
                 }</span
               > •
-              <span class="font-medium" id="vrTypeDisplay">{vrType}</span> •
+              <span class="font-medium" id="vrTypeDisplay">{typeOfVr}</span> •
               <span class="font-medium" id="durationDisplay"
                 >{duration} minutes</span
               > •
@@ -130,7 +130,7 @@ const selectedTime = await Astro.session.get("time");
       class="pt-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between"
     >
       <a
-        href={`/reservation/time?numberOfPeople=${numberOfPeople}&vrType=${vrType}&duration=${duration}`}
+        href={`/reservation/time?numberOfPeople=${numberOfPeople}&typeOfVr=${typeOfVr}&duration=${duration}`}
         class="py-2.5 px-5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-center"
       >
         ← Retour
@@ -156,6 +156,8 @@ const selectedTime = await Astro.session.get("time");
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(form);
+      console.log("Form data:", Object.fromEntries(formData.entries()));
+
       const { error } = await actions.contact(formData);
       if (!error) navigate("/reservation/confirmation");
     });
