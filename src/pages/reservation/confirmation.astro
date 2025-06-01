@@ -1,7 +1,7 @@
 ---
 import ReservationLayout from "../../layouts/ReservationLayout.astro";
 import { format } from "date-fns";
-import { el, fr } from "date-fns/locale";
+import { fr } from "date-fns/locale";
 // Get query parameters from all previous steps
 const numberOfPeople = await Astro.session.get("numberOfPeople");
 const typeOfVr = await Astro.session.get("typeOfVr");
@@ -43,7 +43,7 @@ function calculateTotalPrice() {
 const prixTotal = calculateTotalPrice();
 ---
 
-<ReservationLayout title="Réservation - Confirmation" currentStep={8}>
+<ReservationLayout title="Réservation - Confirmation" currentStep={7}>
   <div class="space-y-8">
     {
       isSuccess ? (
