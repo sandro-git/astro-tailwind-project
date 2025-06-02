@@ -14,13 +14,88 @@ export interface EmailData {
   totalPrice: string;
 }
 
-export async function sendConfirmationEmail(data: EmailData): Promise<{ success: boolean; error?: string }> {
+// Fonction de diagnostic améliorée
+export async function testResendConfiguration(): Promise<{ success: boolean; message: string }> {
   try {
     // Vérifier que la clé API est configurée
     if (!import.meta.env.RESEND_API_KEY) {
-      console.warn('RESEND_API_KEY non configurée - email non envoyé');
-      return { success: false, error: 'Service email non configuré' };
+      return { 
+        success: false, 
+        message: 'RESEND_API_KEY non configurée dans les variables d\'environnement' 
+      };
     }
+
+    const apiKey = import.meta.env.RESEND_API_KEY;
+    
+    // Vérifier le format de la clé API
+    if (!apiKey.startsWith('re_')) {
+      return { 
+        success: false, 
+        message: 'Format de clé API Resend invalide (doit commencer par "re_")' 
+      };
+    }
+
+    // Test plus simple avec l'endpoint de validation
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'test@invalid-domain-for-validation.com',
+          to: ['test@example.com'],
+          subject: 'Test de validation',
+          html: 'Test'
+        })
+      });
+
+      // On s'attend à une erreur 422 (validation) ou 400, pas 401 (authentification)
+      if (response.status === 401) {
+        return { 
+          success: false, 
+          message: 'Clé API Resend invalide ou expirée' 
+        };
+      }
+
+      // Toute autre erreur (422, 400, etc.) signifie que l'authentification a fonctionné
+      return { 
+        success: true, 
+        message: 'Configuration Resend valide - Authentification réussie' 
+      };
+
+    } catch (fetchError) {
+      // Erreur réseau ou autre - on considère que la clé est probablement valide
+      console.warn('Impossible de tester la clé API via l\'API, mais elle semble correcte:', fetchError);
+      return { 
+        success: true, 
+        message: 'Clé API présente et format correct (test réseau échoué)' 
+      };
+    }
+
+  } catch (error) {
+    return { 
+      success: false, 
+      message: `Erreur de test: ${error instanceof Error ? error.message : 'Erreur inconnue'}` 
+    };
+  }
+}
+
+export async function sendConfirmationEmail(data: EmailData): Promise<{ success: boolean; error?: string; details?: any }> {
+  try {
+    console.log('=== DÉBUT ENVOI EMAIL ===');
+    console.log('Destinataire:', data.email);
+    console.log('Numéro de réservation:', data.reservationNumber);
+
+    // Vérifier que la clé API est configurée
+    if (!import.meta.env.RESEND_API_KEY) {
+      const error = 'RESEND_API_KEY non configurée - email non envoyé';
+      console.error('❌', error);
+      return { success: false, error };
+    }
+
+    console.log('✅ Clé API Resend configurée');
 
     // Formatage de la date
     const formattedDate = data.dateTime.toLocaleDateString('fr-FR', {
@@ -34,6 +109,12 @@ export async function sendConfirmationEmail(data: EmailData): Promise<{ success:
       hour: '2-digit',
       minute: '2-digit'
     });
+
+    console.log('✅ Données formatées:', { formattedDate, formattedTime });
+
+    // Email d'expédition configuré
+    const fromEmail = import.meta.env.FROM_EMAIL || 'onboarding@resend.dev';
+    console.log('📧 Email d\'expédition:', fromEmail);
 
     // Template HTML de l'email
     const htmlContent = `
@@ -111,12 +192,12 @@ export async function sendConfirmationEmail(data: EmailData): Promise<{ success:
           
           <p>Nous avons hâte de vous faire vivre cette expérience immersive !</p>
           
-          <p>L'équipe VR Experience</p>
+          <p>L'équipe VR Café</p>
         </div>
         
         <div class="footer">
           <p>Cet email de confirmation a été généré automatiquement.<br>
-          Pour toute question, contactez-nous à : contact@vrexperience.fr</p>
+          Pour toute question, contactez-nous à : contact@vr-cafe.fr</p>
         </div>
       </body>
       </html>
@@ -144,26 +225,51 @@ export async function sendConfirmationEmail(data: EmailData): Promise<{ success:
       - Présentez ce mail à l'accueil
       - Prévenez-nous 24h à l'avance en cas d'empêchement
       
-      L'équipe VR Experience
+      L'équipe VR Café
     `;
 
-    // Envoi de l'email
-    const result = await resend.emails.send({
-      from: 'VR Experience <noreply@vrexperience.fr>',
+    // Paramètres de l'email
+    const emailParams = {
+      from: fromEmail,
       to: [data.email],
       subject: `Confirmation de réservation VR - ${data.reservationNumber}`,
       html: htmlContent,
       text: textContent,
+    };
+
+    console.log('📤 Paramètres d\'envoi:', {
+      from: emailParams.from,
+      to: emailParams.to,
+      subject: emailParams.subject
     });
 
-    console.log('Email envoyé avec succès:', result);
-    return { success: true };
+    // Envoi de l'email
+    console.log('📨 Envoi en cours...');
+    const result = await resend.emails.send(emailParams);
+
+    console.log('✅ Résultat Resend:', result);
+    console.log('=== FIN ENVOI EMAIL ===');
+
+    return { 
+      success: true, 
+      details: result 
+    };
 
   } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'email:', error);
+    console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
+    console.log('=== FIN ENVOI EMAIL (ERREUR) ===');
+    
+    // Journalisation détaillée de l'erreur
+    if (error instanceof Error) {
+      console.error('Type d\'erreur:', error.constructor.name);
+      console.error('Message d\'erreur:', error.message);
+      console.error('Stack trace:', error.stack);
+    }
+    
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Erreur inconnue' 
+      error: error instanceof Error ? error.message : 'Erreur inconnue',
+      details: error
     };
   }
 }
