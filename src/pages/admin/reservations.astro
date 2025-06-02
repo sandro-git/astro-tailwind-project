@@ -1,0 +1,60 @@
+---
+// src/pages/admin/reservations.astro
+import { db, Reservations as ReservationsTable } from "astro:db";
+import Layout from "../../layouts/Layout.astro";
+
+// Récupérer toutes les réservations
+const reservations = await db.select().from(ReservationsTable);
+---
+
+<Layout title="Administration - Réservations">
+  <div class="container mx-auto py-8 px-4">
+    <h1 class="text-3xl font-bold mb-6">Liste des réservations</h1>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      {
+        reservations.length === 0 ? (
+          <p class="text-gray-500">Aucune réservation trouvée.</p>
+        ) : (
+          <div class="space-y-4">
+            {reservations.map((reservation) => (
+              <div class="border border-gray-200 rounded p-4">
+                <h3 class="font-bold text-lg">Réservation #{reservation.id}</h3>
+                <p>
+                  <strong>Nom:</strong> {reservation.fullName}
+                </p>
+                <p>
+                  <strong>Email:</strong> {reservation.email}
+                </p>
+                <p>
+                  <strong>Téléphone:</strong> {reservation.phoneNumber}
+                </p>
+                <p>
+                  <strong>Personnes:</strong> {reservation.numberOfPeople}
+                </p>
+                <p>
+                  <strong>Type VR:</strong> {reservation.vrType}
+                </p>
+                <p>
+                  <strong>Date:</strong>{" "}
+                  {new Date(reservation.dateTime).toLocaleString("fr-FR")}
+                </p>
+                <p>
+                  <strong>Status:</strong> {reservation.status}
+                </p>
+                <p>
+                  <strong>Créé le:</strong>{" "}
+                  {new Date(reservation.createdAt).toLocaleString("fr-FR")}
+                </p>
+              </div>
+            ))}
+          </div>
+        )
+      }
+    </div>
+
+    <div class="mt-6">
+      <p class="text-gray-600">Total: {reservations.length} réservation(s)</p>
+    </div>
+  </div>
+</Layout>

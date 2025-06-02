@@ -2,7 +2,8 @@
 import ReservationLayout from "../../layouts/ReservationLayout.astro";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-// Get query parameters from all previous steps
+
+// Récupérer les données de session
 const numberOfPeople = await Astro.session.get("numberOfPeople");
 const typeOfVr = await Astro.session.get("typeOfVr");
 const duration = await Astro.session.get("duration");
@@ -12,23 +13,26 @@ const fullName = await Astro.session.get("fullName");
 const email = await Astro.session.get("email");
 const phoneNumber = await Astro.session.get("phoneNumber");
 
-// Generate a random reservation number (in a real app, this would come from the database)
-const reservationNumber =
-  "R" +
-  Math.floor(Math.random() * 1000000)
-    .toString()
-    .padStart(6, "0");
+// Récupérer le statut de la réservation
+const isSuccess = (await Astro.session.get("reservationSuccess")) || false;
+const reservationNumber = (await Astro.session.get("reservationNumber")) || "";
+const reservationError = (await Astro.session.get("reservationError")) || "";
 
-// In a real app, this is where you would save the reservation to Astro DB
-// For now, we're just simulating a successful reservation
-const isSuccess = true;
+// Si pas de données, rediriger vers le début
+if (!numberOfPeople || !isSuccess) {
+  return Astro.redirect("/reservation");
+}
+
+// Nettoyer la session après affichage
+await Astro.session.destroy();
 
 function calculateTotalPrice() {
-  const price30 = 18; // Price for 30 minutes
-  const price60 = 29; // Price for 60 minutes
+  const price30 = 18;
+  const price60 = 29;
   const peopleCount = parseInt(numberOfPeople) || 1;
+
   if (duration === "30") {
-    return (price30 * peopleCount).toFixed(2); // 50% discount for 30 minutes
+    return (price30 * peopleCount).toFixed(2);
   } else if (duration === "60") {
     if (peopleCount <= 2) {
       return (price60 * peopleCount).toFixed(2);
@@ -40,6 +44,7 @@ function calculateTotalPrice() {
     return "error";
   }
 }
+
 const prixTotal = calculateTotalPrice();
 ---
 
@@ -85,71 +90,50 @@ const prixTotal = calculateTotalPrice();
             <div class="p-6 space-y-4">
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Nombre de personnes</dt>
-                <dd
-                  class="font-medium text-gray-900"
-                  id="numberOfPeopleDisplay"
-                >
-                  {numberOfPeople
-                    ? `${numberOfPeople} personne${parseInt(numberOfPeople) > 1 ? "s" : ""}`
-                    : "Chargement..."}
+                <dd class="font-medium text-gray-900">
+                  {numberOfPeople} personne
+                  {parseInt(numberOfPeople) > 1 ? "s" : ""}
                 </dd>
               </div>
 
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Type de VR</dt>
-                <dd class="font-medium text-gray-900" id="vrTypeDisplay">
-                  {typeOfVr}
-                </dd>
+                <dd class="font-medium text-gray-900">{typeOfVr}</dd>
               </div>
 
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Durée</dt>
-                <dd class="font-medium text-gray-900" id="durationDisplay">
-                  {duration ? `${duration} minutes` : "Chargement..."}
-                </dd>
+                <dd class="font-medium text-gray-900">{duration} minutes</dd>
               </div>
 
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Date et heure</dt>
-                <dd class="font-medium text-gray-900" id="dateTimeDisplay">
-                  {savedDate && savedTime
-                    ? `Le ${format(savedDate, "EEEE d MMMM", { locale: fr })} à ${savedTime}`
-                    : "Chargement..."}
+                <dd class="font-medium text-gray-900">
+                  Le {format(savedDate, "EEEE d MMMM", { locale: fr })} à{" "}
+                  {savedTime}
                 </dd>
               </div>
 
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Nom</dt>
-                <dd class="font-medium text-gray-900" id="fullNameDisplay">
-                  {fullName || "Chargement..."}
-                </dd>
+                <dd class="font-medium text-gray-900">{fullName}</dd>
               </div>
 
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Email</dt>
-                <dd
-                  class="font-medium text-gray-900 break-all"
-                  id="emailDisplay"
-                >
-                  {email || "Chargement..."}
-                </dd>
+                <dd class="font-medium text-gray-900 break-all">{email}</dd>
               </div>
 
               <div class="flex flex-col sm:flex-row justify-between py-2 border-b border-gray-100">
                 <dt class="text-gray-600 mb-1 sm:mb-0">Téléphone</dt>
-                <dd class="font-medium text-gray-900" id="phoneNumberDisplay">
-                  {phoneNumber}
-                </dd>
+                <dd class="font-medium text-gray-900">{phoneNumber}</dd>
               </div>
 
               <div class="flex flex-col sm:flex-row justify-between py-2 mt-4 pt-4 border-t border-gray-200">
                 <dt class="text-lg font-semibold text-gray-900 mb-1 sm:mb-0">
                   Prix total
                 </dt>
-                <dd
-                  class="text-lg font-semibold text-gray-900"
-                  id="totalPriceDisplay"
-                >
+                <dd class="text-lg font-semibold text-gray-900">
                   {prixTotal} €
                 </dd>
               </div>
@@ -174,11 +158,8 @@ const prixTotal = calculateTotalPrice();
               </div>
               <div class="ml-3">
                 <p class="text-sm text-blue-700">
-                  Un email de confirmation a été envoyé à{" "}
-                  <span id="confirmationEmail">
-                    {email || "votre adresse email"}
-                  </span>
-                  . Veuillez le conserver pour référence.
+                  Un email de confirmation a été envoyé à <span>{email}</span>.
+                  Veuillez le conserver pour référence.
                 </p>
               </div>
             </div>
@@ -209,9 +190,8 @@ const prixTotal = calculateTotalPrice();
             Nous n'avons pas pu traiter votre réservation.
           </p>
           <p class="text-sm text-gray-500 mb-6">
-            Veuillez réessayer ultérieurement ou contacter notre support.
+            {reservationError || "Veuillez réessayer ultérieurement."}
           </p>
-
           <a
             href="/reservation"
             class="inline-flex items-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
@@ -246,5 +226,3 @@ const prixTotal = calculateTotalPrice();
     </div>
   </div>
 </ReservationLayout>
-
-<script></script>

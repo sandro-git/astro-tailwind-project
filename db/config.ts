@@ -12,6 +12,8 @@ export const Reservations = defineTable({
     phoneNumber: column.text(),
     createdAt: column.date(),
     status: column.text({ default: 'PENDING' }), // 'PENDING', 'CONFIRMED', 'CANCELLED'
+    // Ajouter le prix total calculé
+    totalPrice: column.number({ optional: true })
   }
 });
 
