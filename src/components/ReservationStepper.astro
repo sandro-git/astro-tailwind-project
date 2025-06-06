@@ -21,7 +21,7 @@ const steps = [
     <!-- Version mobile : Ne montrer que l'étape actuelle et les étapes adjacentes sur les petits écrans -->
     <nav aria-label="Progress" class="col-span-full md:hidden">
       <div class="text-center mb-4">
-        <span class="text-sm text-gray-500"
+        <span class="text-sm text-gray-400"
           >Étape {currentStep} sur {steps.length}</span
         >
       </div>
@@ -37,10 +37,10 @@ const steps = [
             return (
               <li class={`w-1/4 ${stepIdx !== steps.length - 1}`}>
                 <div
-                  class={`flex flex-col items-center ${step.id === currentStep ? "text-blue-600" : step.id < currentStep ? "text-green-600" : "text-gray-400"}`}
+                  class={`flex flex-col items-center ${step.id === currentStep ? "text-blue-400" : step.id < currentStep ? "text-green-400" : "text-gray-500"}`}
                 >
                   <span
-                    class={`h-8 w-8 flex items-center justify-center rounded-full ${step.id === currentStep ? "bg-blue-100 border-2 border-blue-600" : step.id < currentStep ? "bg-green-100 border-2 border-green-600" : "bg-gray-100 border-2 border-gray-400"}`}
+                    class={`h-8 w-8 flex items-center justify-center rounded-full ${step.id === currentStep ? "bg-blue-900 border-2 border-blue-400" : step.id < currentStep ? "bg-green-900 border-2 border-green-400" : "bg-gray-700 border-2 border-gray-500"}`}
                   >
                     {step.id < currentStep ? (
                       <svg
@@ -75,10 +75,10 @@ const steps = [
           steps.map((step, stepIdx) => (
             <li class={` w-1/8 ${stepIdx !== steps.length - 1}`}>
               <div
-                class={`flex flex-col items-center ${step.id === currentStep ? "text-blue-600" : step.id < currentStep ? "text-green-600" : "text-gray-400"}`}
+                class={`flex flex-col items-center ${step.id === currentStep ? "text-blue-400" : step.id < currentStep ? "text-green-400" : "text-gray-500"}`}
               >
                 <span
-                  class={`h-8 w-8 flex items-center justify-center rounded-full ${step.id === currentStep ? "bg-blue-100 border-2 border-blue-600" : step.id < currentStep ? "bg-green-100 border-2 border-green-600" : "bg-gray-100 border-2 border-gray-400"}`}
+                  class={`h-8 w-8 flex items-center justify-center rounded-full ${step.id === currentStep ? "bg-blue-900 border-2 border-blue-400" : step.id < currentStep ? "bg-green-900 border-2 border-green-400" : "bg-gray-700 border-2 border-gray-500"}`}
                 >
                   {step.id < currentStep ? (
                     <svg

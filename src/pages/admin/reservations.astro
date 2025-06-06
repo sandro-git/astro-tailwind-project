@@ -83,9 +83,10 @@ function getStatusLabel(status: string): string {
 ---
 
 <Layout title="Administration - Réservations">
-  <div class="container mx-auto py-8 px-4">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold">Gestion des réservations</h1>
+  <div class="min-h-screen bg-gray-900">
+    <div class="container mx-auto py-8 px-4">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Gestion des réservations</h1>
       <div class="flex items-center gap-4">
         <form method="GET" class="flex items-center gap-2">
           <input 
@@ -93,62 +94,62 @@ function getStatusLabel(status: string): string {
             name="search" 
             value={searchQuery}
             placeholder="Rechercher un client..."
-            class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
           />
           {sortBy && <input type="hidden" name="sortBy" value={sortBy} />}
           {sortOrder && <input type="hidden" name="sortOrder" value={sortOrder} />}
           <button 
             type="submit"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm transition-colors"
           >
             Rechercher
           </button>
           {searchQuery && (
             <a 
               href={`?${sortBy ? `sortBy=${sortBy}&sortOrder=${sortOrder}` : ''}`}
-              class="px-3 py-2 text-gray-600 hover:text-gray-800 text-sm"
+              class="px-3 py-2 text-gray-300 hover:text-white text-sm transition-colors"
             >
               Effacer
             </a>
           )}
         </form>
-        <div class="text-sm text-gray-600">
-          Total: <span class="font-semibold">{reservations.length}</span> réservation(s)
+        <div class="text-sm text-gray-300">
+          Total: <span class="font-semibold text-white">{reservations.length}</span> réservation(s)
         </div>
       </div>
     </div>
 
     {
       reservations.length === 0 ? (
-        <div class="bg-white rounded-lg shadow p-8 text-center">
-          <div class="text-gray-400 mb-4">
+        <div class="bg-gray-800 rounded-lg shadow-lg p-8 text-center border border-gray-700">
+          <div class="text-gray-500 mb-4">
             <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune réservation</h3>
-          <p class="text-gray-500">Les réservations apparaîtront ici une fois créées.</p>
+          <h3 class="text-lg font-medium text-white mb-2">Aucune réservation</h3>
+          <p class="text-gray-400">Les réservations apparaîtront ici une fois créées.</p>
         </div>
       ) : (
-        <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700">
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-gray-700">
+              <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Réservation
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Client
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     <a 
                       href={`?sortBy=date&sortOrder=${sortBy === 'date' && sortOrder === 'asc' ? 'desc' : 'asc'}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`}
-                      class="hover:text-gray-700 cursor-pointer flex items-center gap-1"
+                      class="hover:text-blue-400 cursor-pointer flex items-center gap-1 transition-colors"
                     >
                       Date & Heure
                       {sortBy === 'date' && (
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                           {sortOrder === 'asc' ? (
                             <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
                           ) : (
@@ -158,62 +159,62 @@ function getStatusLabel(status: string): string {
                       )}
                     </a>
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Détails
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Prix
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Statut
                   </th>
                 </tr>
               </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
+              <tbody class="bg-gray-800 divide-y divide-gray-700">
                 {reservations.map((reservation) => {
                   const reservationDate = new Date(reservation.dateTime);
                   const createdDate = new Date(reservation.createdAt);
                   const totalPrice = calculatePrice(reservation.numberOfPeople);
                   
                   return (
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-gray-700 transition-colors">
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm">
-                          <div class="font-medium text-gray-900">#{reservation.id}</div>
-                          <div class="text-gray-500">
+                          <div class="font-medium text-white">#{reservation.id}</div>
+                          <div class="text-gray-400">
                             Créé le {formatDate(createdDate)}
                           </div>
                         </div>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm">
-                          <div class="font-medium text-gray-900">{reservation.fullName}</div>
-                          <div class="text-gray-500">{reservation.email}</div>
-                          <div class="text-gray-500">{reservation.phoneNumber}</div>
+                          <div class="font-medium text-white">{reservation.fullName}</div>
+                          <div class="text-gray-400">{reservation.email}</div>
+                          <div class="text-gray-400">{reservation.phoneNumber}</div>
                         </div>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm">
-                          <div class="font-medium text-gray-900">
+                          <div class="font-medium text-white">
                             {formatDate(reservationDate)}
                           </div>
-                          <div class="text-gray-500">
+                          <div class="text-gray-400">
                             à {formatTime(reservationDate)}
                           </div>
                         </div>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm">
-                          <div class="font-medium text-gray-900">
+                          <div class="font-medium text-white">
                             {reservation.numberOfPeople} personne(s)
                           </div>
-                          <div class="text-gray-500">
+                          <div class="text-gray-400">
                             {reservation.vrType === 'VR_WIRELESS' ? 'VR Sans fil' : 'VR Standard'}
                           </div>
                         </div>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">
+                        <div class="text-sm font-medium text-blue-400">
                           {totalPrice}€
                         </div>
                       </td>
@@ -231,5 +232,6 @@ function getStatusLabel(status: string): string {
         </div>
       )
     }
+    </div>
   </div>
 </Layout>

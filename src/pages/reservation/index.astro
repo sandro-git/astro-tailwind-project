@@ -5,10 +5,10 @@ import ReservationLayout from "../../layouts/ReservationLayout.astro";
 <ReservationLayout title="Réservation - Nombre de personnes" currentStep={1}>
   <form class="space-y-6" id="peopleForm">
     <div>
-      <h2 class="text-2xl font-bold text-gray-900 mb-4">
+      <h2 class="text-2xl font-bold text-white mb-4">
         Combien de personnes ?
       </h2>
-      <p class="text-gray-600 mb-6">
+      <p class="text-gray-300 mb-6">
         Sélectionnez le nombre de participants (maximum 6 personnes)
       </p>
 
@@ -26,8 +26,8 @@ import ReservationLayout from "../../layouts/ReservationLayout.astro";
                 required
                 checked={number === 1}
               />
-              <div class="h-24 flex items-center justify-center rounded-lg border-2 border-gray-300 bg-white text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
-                <span class="text-xl font-medium">{number}</span>
+              <div class="h-24 flex items-center justify-center rounded-lg border-2 border-gray-600 bg-gray-800 text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-900 transition-all">
+                <span class="text-xl font-medium text-white">{number}</span>
               </div>
             </label>
           ))
