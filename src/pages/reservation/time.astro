@@ -1,7 +1,8 @@
 ---
 import ReservationLayout from "../../layouts/ReservationLayout.astro";
+import { db, Reservations } from "astro:db";
 
-import { parseISO, setHours, setMinutes, format } from "date-fns";
+import { parseISO, setHours, setMinutes, format, addMinutes, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
 
 const numberOfPeople = await Astro.session.get("numberOfPeople");
@@ -18,15 +19,52 @@ if (isNaN(interval) || (interval !== 30 && interval !== 60)) {
 // Liste des créneaux indisponibles
 // const unavailableTimesSet = new Set(["15:30", "17:00", "18:30", "20:00"]);
 
-// Fonction pour générer les créneaux
+// Fonction pour vérifier si un créneau est disponible
+async function isTimeSlotAvailable(dateTime: Date, durationMinutes: number, requestedPeople: number, vrType: string): Promise<boolean> {
+  const slotEndTime = addMinutes(dateTime, durationMinutes);
+  
+  // Récupérer toutes les réservations confirmées pour cette date
+  const existingReservations = await db.select().from(Reservations);
+  
+  // Filtrer les réservations du même jour et non annulées
+  const dayReservations = existingReservations.filter(reservation => 
+    isSameDay(new Date(reservation.dateTime), dateTime) && 
+    reservation.status !== 'CANCELLED'
+  );
+  
+  // Vérifier exactement au même moment (même heure exacte)
+  const exactTimeReservations = dayReservations.filter(reservation => {
+    const reservationStart = new Date(reservation.dateTime);
+    return reservationStart.getTime() === dateTime.getTime();
+  });
+  
+  // Séparer par type de VR pour ce créneau exact
+  const vrStandardReservations = exactTimeReservations.filter(r => r.vrType === 'VR');
+  const vrWirelessReservations = exactTimeReservations.filter(r => r.vrType === 'VR_WIRELESS');
+  
+  if (vrType === 'VR_WIRELESS') {
+    // VR sans fil : une seule réservation VR sans fil par créneau exact
+    // Peut coexister avec VR standard
+    return vrWirelessReservations.length === 0;
+  } else {
+    // VR standard : max 6 personnes au total sur le créneau exact
+    // Peut coexister avec VR sans fil
+    
+    // Calculer le nombre total de personnes avec VR standard sur ce créneau exact
+    const totalVRStandardPeople = vrStandardReservations.reduce((sum, r) => sum + r.numberOfPeople, 0);
+    
+    // Vérifier si on peut ajouter les nouvelles personnes sans dépasser 6
+    return (totalVRStandardPeople + requestedPeople) <= 6;
+  }
+}
 
-function generateTimeSlots(dateString: string, interval = 60) {
+// Fonction pour générer les créneaux
+async function generateTimeSlots(dateString: string, interval = 60, numberOfPeople: number, vrType: string) {
   // Configuration de base
   const startHour = 14;
   const endHour = 22;
   const now = new Date();
-  const unavailableTimesSet = new Set([]);
-  const slots: { value: string; label: string }[] = [];
+  const slots: { value: string; label: string; available: boolean }[] = [];
 
   // Sortie anticipée si pas de date
   if (!dateString) {
@@ -55,28 +93,27 @@ function generateTimeSlots(dateString: string, interval = 60) {
     return slots;
   }
 
-  // MODIFICATION : Générer des créneaux pour aujourd'hui ET les dates futures
   // Générer tous les créneaux possibles
   for (let hour = startHour; hour < endHour; hour++) {
     for (let minute = 0; minute < 60; minute += interval) {
       // Création d'une date pour ce créneau
-      const currentDate = new Date();
-      const slotTime = setMinutes(setHours(currentDate, hour), minute);
+      const slotDateTime = setMinutes(setHours(selectedDate, hour), minute);
 
       // Vérifier si le créneau est déjà passé (seulement pour aujourd'hui)
-      if (isToday && slotTime <= now) {
+      if (isToday && slotDateTime <= now) {
         continue;
       }
 
-      const formattedValue = format(slotTime, "H:mm");
+      const formattedValue = format(slotDateTime, "H:mm");
+      
+      // Vérifier la disponibilité du créneau
+      const isAvailable = await isTimeSlotAvailable(slotDateTime, interval, numberOfPeople, vrType);
 
-      // Ajouter le créneau s'il est disponible
-      if (!unavailableTimesSet.has(formattedValue)) {
-        slots.push({
-          value: formattedValue,
-          label: formattedValue,
-        });
-      }
+      slots.push({
+        value: formattedValue,
+        label: formattedValue,
+        available: isAvailable,
+      });
     }
   }
 
@@ -84,7 +121,7 @@ function generateTimeSlots(dateString: string, interval = 60) {
 }
 
 // Générer les créneaux disponibles
-const availableTimeSlots = generateTimeSlots(selectedDate, interval);
+const availableTimeSlots = await generateTimeSlots(selectedDate, interval, numberOfPeople, typeOfVr);
 ---
 
 <ReservationLayout title="Réservation - Horaires" currentStep={5}>
@@ -107,16 +144,24 @@ const availableTimeSlots = generateTimeSlots(selectedDate, interval);
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {
             availableTimeSlots.map((timeSlot) => (
-              <label class="time-slot relative block">
+              <label class={`time-slot relative block ${!timeSlot.available ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <input
                   type="radio"
                   name="time"
                   value={timeSlot.value}
                   class="time-radio peer sr-only"
                   required
+                  disabled={!timeSlot.available}
                 />
-                <div class="h-16 flex items-center justify-center rounded-lg border-2 border-gray-600 bg-gray-800 text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-900 transition-all">
-                  <span class="text-lg font-medium text-white">{timeSlot.label}</span>
+                <div class={`h-16 flex items-center justify-center rounded-lg border-2 text-center transition-all ${
+                  timeSlot.available 
+                    ? 'border-gray-600 bg-gray-800 cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-900 hover:border-gray-500' 
+                    : 'border-red-600 bg-red-900/20 cursor-not-allowed'
+                }`}>
+                  <span class={`text-lg font-medium ${timeSlot.available ? 'text-white' : 'text-red-400'}`}>
+                    {timeSlot.label}
+                    {!timeSlot.available && <span class="block text-xs">Indisponible</span>}
+                  </span>
                 </div>
               </label>
             ))
@@ -167,7 +212,7 @@ const availableTimeSlots = generateTimeSlots(selectedDate, interval);
     timeSlots.forEach((slot) => {
       slot.addEventListener("click", async () => {
         const radio = slot.querySelector(".time-radio");
-        if (radio instanceof HTMLInputElement) {
+        if (radio instanceof HTMLInputElement && !radio.disabled) {
           // Set radio as checked
           radio.checked = true;
 
