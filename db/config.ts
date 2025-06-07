@@ -7,11 +7,11 @@ export const Reservations = defineTable({
     numberOfPeople: column.number(),
     vrType: column.text(),  // 'VR' or 'VR_WIRELESS'
     dateTime: column.date(),
+    duration: column.number(), // Duration in minutes (30 or 60)
     fullName: column.text(),
     email: column.text(),
     phoneNumber: column.text(),
     createdAt: column.date(),
-    status: column.text({ default: 'PENDING' }), // 'PENDING', 'CONFIRMED', 'CANCELLED'
     // Ajouter le prix total calculé
     totalPrice: column.number({ optional: true })
   }

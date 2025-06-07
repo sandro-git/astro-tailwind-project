@@ -115,11 +115,11 @@ export const server = {
           numberOfPeople: parseInt(numberOfPeople),
           vrType: typeOfVr,
           dateTime: reservationDateTime,
+          duration: parseInt(duration),
           fullName: input.fullName,
           email: input.email,
           phoneNumber: input.phoneNumber,
-          createdAt: new Date(),
-          status: 'CONFIRMED'
+          createdAt: new Date()
         }).returning();
 
         // Calculer le prix total
