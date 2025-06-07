@@ -5,26 +5,26 @@ import Layout from "../../layouts/Layout.astro";
 
 // Récupérer les paramètres depuis l'URL
 const url = new URL(Astro.request.url);
-const sortBy = url.searchParams.get('sortBy');
-const sortOrder = url.searchParams.get('sortOrder') || 'asc';
-const searchQuery = url.searchParams.get('search') || '';
+const sortBy = url.searchParams.get("sortBy");
+const sortOrder = url.searchParams.get("sortOrder") || "asc";
+const searchQuery = url.searchParams.get("search") || "";
 
 // Récupérer toutes les réservations
 let reservations = await db.select().from(ReservationsTable);
 
 // Appliquer le filtre de recherche
 if (searchQuery) {
-  reservations = reservations.filter(reservation => 
+  reservations = reservations.filter((reservation) =>
     reservation.fullName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 }
 
 // Appliquer le tri
-if (sortBy === 'date') {
+if (sortBy === "date") {
   reservations = reservations.sort((a, b) => {
     const dateA = new Date(a.dateTime).getTime();
     const dateB = new Date(b.dateTime).getTime();
-    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
   });
 }
 
@@ -37,28 +37,28 @@ function calculatePrice(numberOfPeople: number): number {
 
 // Fonction pour formater la date
 function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('fr-FR', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   }).format(date);
 }
 
 // Fonction pour formater l'heure
 function formatTime(date: Date): string {
-  return new Intl.DateTimeFormat('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit'
+  return new Intl.DateTimeFormat("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
 // Fonction pour formater la durée
 function formatDuration(duration: number): string {
   if (duration === 30) {
-    return '30 min';
+    return "30 min";
   } else if (duration === 60) {
-    return '1h';
+    return "1h";
   }
   return `${duration} min`;
 }
@@ -68,161 +68,209 @@ function formatDuration(duration: number): string {
   <div class="min-h-screen bg-gray-900">
     <div class="container mx-auto py-8 px-4">
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Gestion des réservations</h1>
-      <div class="flex items-center gap-4">
-        <a 
-          href="/reservation"
-          class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm transition-colors font-medium"
+        <h1
+          class="text-3xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text"
         >
-          Créer une réservation
-        </a>
-        <form method="GET" class="flex items-center gap-2">
-          <input 
-            type="text" 
-            name="search" 
-            value={searchQuery}
-            placeholder="Rechercher un client..."
-            class="px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
-          />
-          {sortBy && <input type="hidden" name="sortBy" value={sortBy} />}
-          {sortOrder && <input type="hidden" name="sortOrder" value={sortOrder} />}
-          <button 
-            type="submit"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm transition-colors"
+          Gestion des réservations
+        </h1>
+        <div class="flex items-center gap-4">
+          <a
+            href="/reservation"
+            class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm transition-colors font-medium"
           >
-            Rechercher
-          </button>
-          {searchQuery && (
-            <a 
-              href={`?${sortBy ? `sortBy=${sortBy}&sortOrder=${sortOrder}` : ''}`}
-              class="px-3 py-2 text-gray-300 hover:text-white text-sm transition-colors"
+            Créer une réservation
+          </a>
+          <form method="GET" class="flex items-center gap-2">
+            <input
+              type="text"
+              name="search"
+              value={searchQuery}
+              placeholder="Rechercher un client..."
+              class="px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+            />
+            {sortBy && <input type="hidden" name="sortBy" value={sortBy} />}
+            {
+              sortOrder && (
+                <input type="hidden" name="sortOrder" value={sortOrder} />
+              )
+            }
+            <button
+              type="submit"
+              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm transition-colors"
             >
-              Effacer
-            </a>
-          )}
-        </form>
-        <div class="text-sm text-gray-300">
-          Total: <span class="font-semibold text-white">{reservations.length}</span> réservation(s)
+              Rechercher
+            </button>
+            {
+              searchQuery && (
+                <a
+                  href={`?${sortBy ? `sortBy=${sortBy}&sortOrder=${sortOrder}` : ""}`}
+                  class="px-3 py-2 text-gray-300 hover:text-white text-sm transition-colors"
+                >
+                  Effacer
+                </a>
+              )
+            }
+          </form>
+          <div class="text-sm text-gray-300">
+            Total: <span class="font-semibold text-white"
+              >{reservations.length}</span
+            > réservation(s)
+          </div>
         </div>
       </div>
-    </div>
 
-    {
-      reservations.length === 0 ? (
-        <div class="bg-gray-800 rounded-lg shadow-lg p-8 text-center border border-gray-700">
-          <div class="text-gray-500 mb-4">
-            <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
+      {
+        reservations.length === 0 ? (
+          <div class="bg-gray-800 rounded-lg shadow-lg p-8 text-center border border-gray-700">
+            <div class="text-gray-500 mb-4">
+              <svg
+                class="mx-auto h-12 w-12"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-white mb-2">
+              Aucune réservation
+            </h3>
+            <p class="text-gray-400">
+              Les réservations apparaîtront ici une fois créées.
+            </p>
           </div>
-          <h3 class="text-lg font-medium text-white mb-2">Aucune réservation</h3>
-          <p class="text-gray-400">Les réservations apparaîtront ici une fois créées.</p>
-        </div>
-      ) : (
-        <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700">
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-700">
-              <thead class="bg-gray-700">
-                <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Réservation
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    <a 
-                      href={`?sortBy=date&sortOrder=${sortBy === 'date' && sortOrder === 'asc' ? 'desc' : 'asc'}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`}
-                      class="hover:text-blue-400 cursor-pointer flex items-center gap-1 transition-colors"
-                    >
-                      Date & Heure
-                      {sortBy === 'date' && (
-                        <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                          {sortOrder === 'asc' ? (
-                            <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
-                          ) : (
-                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                          )}
-                        </svg>
-                      )}
-                    </a>
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Détails
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Prix
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Durée
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="bg-gray-800 divide-y divide-gray-700">
-                {reservations.map((reservation) => {
-                  const reservationDate = new Date(reservation.dateTime);
-                  const createdDate = new Date(reservation.createdAt);
-                  const totalPrice = calculatePrice(reservation.numberOfPeople);
-                  
-                  return (
-                    <tr class="hover:bg-gray-700 transition-colors">
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">
-                          <div class="font-medium text-white">#{reservation.id}</div>
-                          <div class="text-gray-400">
-                            Créé le {formatDate(createdDate)}
+        ) : (
+          <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-700">
+                <thead class="bg-gray-700">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Réservation
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Client
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <a
+                        href={`?sortBy=date&sortOrder=${sortBy === "date" && sortOrder === "asc" ? "desc" : "asc"}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}`}
+                        class="hover:text-blue-400 cursor-pointer flex items-center gap-1 transition-colors"
+                      >
+                        Date & Heure
+                        {sortBy === "date" && (
+                          <svg
+                            class="w-4 h-4 text-blue-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            {sortOrder === "asc" ? (
+                              <path
+                                fill-rule="evenodd"
+                                d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+                                clip-rule="evenodd"
+                              />
+                            ) : (
+                              <path
+                                fill-rule="evenodd"
+                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                clip-rule="evenodd"
+                              />
+                            )}
+                          </svg>
+                        )}
+                      </a>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Détails
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Prix
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Durée
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-gray-800 divide-y divide-gray-700">
+                  {reservations.map((reservation) => {
+                    const reservationDate = new Date(reservation.dateTime);
+                    const createdDate = new Date(reservation.createdAt);
+                    const totalPrice = calculatePrice(
+                      reservation.numberOfPeople
+                    );
+
+                    return (
+                      <tr class="hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <div class="text-sm">
+                            <div class="font-medium text-white">
+                              #{reservation.id}
+                            </div>
+                            <div class="text-gray-400">
+                              Créé le {formatDate(createdDate)}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">
-                          <div class="font-medium text-white">{reservation.fullName}</div>
-                          <div class="text-gray-400">{reservation.email}</div>
-                          <div class="text-gray-400">{reservation.phoneNumber}</div>
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">
-                          <div class="font-medium text-white">
-                            {formatDate(reservationDate)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <div class="text-sm">
+                            <div class="font-medium text-white">
+                              {reservation.fullName}
+                            </div>
+                            <div class="text-gray-400">{reservation.email}</div>
+                            <div class="text-gray-400">
+                              {reservation.phoneNumber}
+                            </div>
                           </div>
-                          <div class="text-gray-400">
-                            à {formatTime(reservationDate)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <div class="text-sm">
+                            <div class="font-medium text-white">
+                              {formatDate(reservationDate)}
+                            </div>
+                            <div class="text-gray-400">
+                              à {formatTime(reservationDate)}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">
-                          <div class="font-medium text-white">
-                            {reservation.numberOfPeople} personne(s)
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <div class="text-sm">
+                            <div class="font-medium text-white">
+                              {reservation.numberOfPeople} personne(s)
+                            </div>
+                            <div class="text-gray-400">
+                              {reservation.vrType === "VR_WIRELESS"
+                                ? "VR Sans fil"
+                                : "VR Standard"}
+                            </div>
+                            <div class="text-blue-400">
+                              {formatDuration(reservation.duration)}
+                            </div>
                           </div>
-                          <div class="text-gray-400">
-                            {reservation.vrType === 'VR_WIRELESS' ? 'VR Sans fil' : 'VR Standard'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <div class="text-sm font-medium text-blue-400">
+                            {totalPrice}€
                           </div>
-                          <div class="text-blue-400">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <div class="text-sm font-medium text-green-400">
                             {formatDuration(reservation.duration)}
                           </div>
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-blue-400">
-                          {totalPrice}€
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-green-400">
-                          {formatDuration(reservation.duration)}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )
-    }
+        )
+      }
     </div>
   </div>
 </Layout>
