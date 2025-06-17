@@ -26,31 +26,42 @@ async function isTimeSlotAvailable(dateTime: Date, durationMinutes: number, requ
   // Récupérer toutes les réservations confirmées pour cette date
   const existingReservations = await db.select().from(Reservations);
   
-  // Filtrer les réservations du même jour et non annulées
+  // Filtrer les réservations du même jour
   const dayReservations = existingReservations.filter(reservation => 
-    isSameDay(new Date(reservation.dateTime), dateTime) && 
-    reservation.status !== 'CANCELLED'
+    isSameDay(new Date(reservation.dateTime), dateTime)
   );
   
-  // Vérifier exactement au même moment (même heure exacte)
-  const exactTimeReservations = dayReservations.filter(reservation => {
+  // Vérifier tous les chevauchements possibles avec les réservations existantes
+  const overlappingReservations = dayReservations.filter(reservation => {
     const reservationStart = new Date(reservation.dateTime);
-    return reservationStart.getTime() === dateTime.getTime();
+    const reservationEnd = addMinutes(reservationStart, reservation.duration);
+    
+    // Vérifier si les créneaux se chevauchent (toutes les possibilités)
+    return (
+      // Le nouveau créneau commence pendant une réservation existante
+      (dateTime >= reservationStart && dateTime < reservationEnd) ||
+      // Le nouveau créneau se termine pendant une réservation existante
+      (slotEndTime > reservationStart && slotEndTime <= reservationEnd) ||
+      // Le nouveau créneau englobe complètement la réservation existante
+      (dateTime <= reservationStart && slotEndTime >= reservationEnd) ||
+      // La réservation existante englobe complètement le nouveau créneau
+      (reservationStart <= dateTime && reservationEnd >= slotEndTime)
+    );
   });
   
-  // Séparer par type de VR pour ce créneau exact
-  const vrStandardReservations = exactTimeReservations.filter(r => r.vrType === 'VR');
-  const vrWirelessReservations = exactTimeReservations.filter(r => r.vrType === 'VR_WIRELESS');
+  // Séparer par type de VR pour les réservations qui se chevauchent
+  const vrStandardReservations = overlappingReservations.filter(r => r.vrType === 'VR');
+  const vrWirelessReservations = overlappingReservations.filter(r => r.vrType === 'VR_WIRELESS');
   
   if (vrType === 'VR_WIRELESS') {
-    // VR sans fil : une seule réservation VR sans fil par créneau exact
+    // VR sans fil : une seule réservation VR sans fil par période qui se chevauche
     // Peut coexister avec VR standard
     return vrWirelessReservations.length === 0;
   } else {
-    // VR standard : max 6 personnes au total sur le créneau exact
+    // VR standard : max 6 personnes au total sur les créneaux qui se chevauchent
     // Peut coexister avec VR sans fil
     
-    // Calculer le nombre total de personnes avec VR standard sur ce créneau exact
+    // Calculer le nombre total de personnes avec VR standard qui se chevauchent
     const totalVRStandardPeople = vrStandardReservations.reduce((sum, r) => sum + r.numberOfPeople, 0);
     
     // Vérifier si on peut ajouter les nouvelles personnes sans dépasser 6
